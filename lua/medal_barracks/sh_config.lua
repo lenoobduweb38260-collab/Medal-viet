@@ -157,8 +157,17 @@ cfg.HideDefaultHUD = {
         CHudSecondaryAmmo = true,
         CHudWeaponSelection = true,
         CHudCrosshair = true,
-        CHudDamageIndicator = false,
-        CHudChat = false,
+        CHudDamageIndicator = true,
+        CHudHistoryResource = true,
+        CHudSuitPower = true,
+        CHudPoisonDamageIndicator = true,
+        CHudSquadStatus = true,
+        CHudTrain = true,
+        CHudVehicle = true,
+        CHudGeiger = true,
+        CHudHintDisplay = true,
+        CHudZoom = true,
+        CHudChat = false, -- garde le chat : nécessaire pour la radio et le RP
     },
 }
 
@@ -179,6 +188,12 @@ cfg.WeaponSelector = {
     Padding = 16,
     PanelMaterial = "medal/ui/weapon_selector_panel.png",
     SlotMaterial = "medal/ui/weapon_selector_slot.png",
+
+    -- Style HLL : molette = changement d'arme direct, bandeau ARME ACTUELLE en bas à droite.
+    ScrollSwitch = true,              -- true = invnext/invprev changent d'arme immédiatement
+    CurrentLabel = "ARME ACTUELLE",   -- équivalent du "CURRENT WEAPON" de HLL
+    IconH = 40,                       -- hauteur des silhouettes empilées
+    IconGap = 10,
 
     -- Image par arme : clé = code d'arme GMod / class.
     WeaponIcons = {
@@ -202,6 +217,88 @@ cfg.WeaponSelector = {
         weapon_crowbar = "Pelle",
         weapon_stunstick = "Pelle",
     },
+}
+
+-- =========================
+-- Équipement rapide (touche B par défaut, configurable dans cfg.Keybinds).
+-- Ouvre un bandeau HLL listant les armes "équipement" du joueur : grenades,
+-- bandages, trousse médicale, outils… Clique (ou chiffre) pour équiper.
+-- =========================
+cfg.QuickEquip = {
+    Enabled = true,
+    Title = "ÉQUIPEMENT",
+    -- Une arme tenue est considérée comme un équipement si sa class contient
+    -- un de ces motifs, ou si elle est listée explicitement dans Classes.
+    Patterns = {"frag", "grenade", "smoke", "med", "bandage", "kit", "defib", "heal", "ammo", "tool", "slam"},
+    Classes = {
+        -- ["cw_frag_grenade"] = true,
+    },
+    -- Classes à ne jamais afficher dans le bandeau.
+    Blacklist = {
+        -- ["weapon_physgun"] = true,
+    },
+}
+
+-- =========================
+-- Escouades façon Hell Let Loose.
+-- Chaque faction a ses escouades (ABLE, BAKER, CHARLIE…), 6 joueurs maximum,
+-- le créateur devient chef d'escouade (SL). HUD en bas à gauche comme HLL.
+-- =========================
+cfg.Squads = {
+    Enabled = true,
+    MaxMembers = 6,
+    Names = {"ABLE", "BAKER", "CHARLIE", "DOG", "EASY", "FOX", "GEORGE", "HOW", "ITEM", "JIG", "KING", "LOVE"},
+    -- Le chat SL : commandant, chefs d'escouade et radiomen (selon règles radio).
+    SLChatCommand = "/sl",
+    LeaderIcon = "★",
+    HUD = {
+        Enabled = true,
+        X = 26,
+        BottomMargin = 40,
+    },
+}
+
+-- =========================
+-- Radio de campagne / rôle RADIO (Radioman).
+-- Le radioman déploie sa radio avec le SWEP medal_radio_swep :
+--   clic droit = aperçu fantôme (vert si la position est valide, rouge sinon),
+--   maintenir clic gauche = jauge circulaire, la radio se pose à 100%.
+-- E sur la radio posée = réglage de la fréquence (animation de tuning).
+-- Canaux : réseau radio (tous les radiomen, toujours entendu par eux) et
+-- COMMANDEMENT (SL) : le radioman doit avoir posé SA radio sur la fréquence SL
+-- pour entendre le canal commandement. Les joueurs à HearRadiusMeters autour
+-- d'une radio posée entendent tout ce qui passe sur sa fréquence.
+-- =========================
+cfg.Radio = {
+    Enabled = true,
+
+    -- Props de la radio posée. Change ce model pour ta radio Vietnam custom.
+    PropModel = "models/props_lab/reciever01a.mdl",
+
+    -- SWEP : modèle en main (worldmodel) et portée de pose.
+    WorldModel = "models/props_lab/reciever01a.mdl",
+    MaxDeployDistance = 95,      -- distance max de pose devant le joueur (unités)
+    DeployTime = 1.6,            -- durée du maintien clic gauche (jauge circulaire)
+    MaxRadiosPerPlayer = 1,      -- la pose d'une nouvelle radio retire l'ancienne
+
+    -- Rayon d'écoute autour d'une radio posée (en mètres).
+    HearRadiusMeters = 10,
+    MetersToUnits = 39.37,       -- conversion mètres -> unités Hammer/GMod
+
+    -- Fréquences disponibles dans le menu de la radio.
+    Frequencies = {
+        {id = "radioman", name = "RÉSEAU RADIO", freq = "31.00 MHz", desc = "Canal des opérateurs radio."},
+        {id = "sl", name = "COMMANDEMENT", freq = "38.50 MHz", desc = "Canal des chefs d'escouade et du commandant."},
+    },
+    DefaultFrequency = "radioman",
+    TuneTime = 1.4,              -- durée de l'animation de recherche de fréquence
+
+    -- Commandes chat.
+    RadioChatCommand = "/radio", -- radioman -> réseau radio (ou SL si sa radio est sur la fréquence SL)
+    -- Le canal SL utilise cfg.Squads.SLChatCommand (/sl).
+
+    -- Rôles considérés comme radioman (id du Role dans cfg.Armies).
+    RadiomanRoleIDs = {"radioman"},
 }
 
 cfg.UI = {
@@ -374,6 +471,8 @@ cfg.Keybinds = {
     {id = "main_menu", label = "Menu principal", description = "Ouvre le menu Medal Vietnam.", defaultKey = KEY_F6, action = "open_main_menu"},
     {id = "barracks", label = "Caserne", description = "Ouvre directement les rôles si le personnage existe.", defaultKey = KEY_F7, action = "open_barracks"},
     {id = "present", label = "Se présenter", description = "Présente ton personnage aux joueurs proches.", defaultKey = KEY_F3, action = "present"},
+    {id = "squads", label = "Escouades", description = "Ouvre le menu des escouades de ta faction.", defaultKey = KEY_K, action = "open_squads"},
+    {id = "quick_equip", label = "Équipement rapide", description = "Ouvre la sélection rapide : grenades, bandages, trousse médicale…", defaultKey = KEY_B, action = "quick_equip"},
 }
 
 -- Binds GMod natifs affichés dans notre UI.
@@ -670,7 +769,7 @@ cfg.RemoteMedia = {
     AllowInsecureHTTP = false,
 
     -- Si une vidéo de fond est utilisée, son opacité permet de garder l'UI lisible.
-    BackgroundVideoAlpha = 0.72,
+    BackgroundVideoAlpha = 1.00,
 
     -- Si un menu n'a pas encore d'URL vidéo dédiée, il garde automatiquement
     -- la vidéo du main menu derrière l'UI au lieu de repasser sur le fond statique.
@@ -681,10 +780,10 @@ cfg.RemoteMedia = {
     MainMenuDropboxVideo = {
         Enabled = true,
         URL = "https://www.dropbox.com/scl/fi/uwkm6t3htbdn28tl00z5b/California-Dreamin.webm?rlkey=z8pqdwouykd8vxlxd1akoq3bu&st=hk2u282r&dl=0",
-        Volume = 0.35, -- 0 = muet, 0.25 = discret, 1 = volume max
+        Volume = 0.10, -- 0 = muet, 0.10 = discret (valeur demandée), 1 = volume max
         Muted = false,
         Loop = true,
-        Opacity = 0.72,
+        Opacity = 1.00,
         ObjectFit = "cover",
         Filter = "brightness(.62) contrast(1.12) saturate(.92)",
     },
@@ -697,10 +796,10 @@ cfg.RemoteMedia = {
         main_menu_background = {
             Enabled = true,
             URL = "https://www.dropbox.com/scl/fi/uwkm6t3htbdn28tl00z5b/California-Dreamin.webm?rlkey=z8pqdwouykd8vxlxd1akoq3bu&st=hk2u282r&dl=0",
-            Volume = 0.35,
+            Volume = 0.10,
             Muted = false,
             Loop = true,
-            Opacity = 0.72,
+            Opacity = 1.00,
             ObjectFit = "cover",
             Filter = "brightness(.62) contrast(1.12) saturate(.92)",
         },
@@ -711,7 +810,7 @@ cfg.RemoteMedia = {
             Volume = 0,
             Muted = true,
             Loop = true,
-            Opacity = 0.72,
+            Opacity = 1.00,
             ObjectFit = "cover",
             Filter = "brightness(.62) contrast(1.12) saturate(.92)",
         },
@@ -722,7 +821,7 @@ cfg.RemoteMedia = {
             Volume = 0,
             Muted = true,
             Loop = true,
-            Opacity = 0.72,
+            Opacity = 1.00,
             ObjectFit = "cover",
             Filter = "brightness(.62) contrast(1.12) saturate(.92)",
         },
@@ -733,7 +832,7 @@ cfg.RemoteMedia = {
             Volume = 0,
             Muted = true,
             Loop = true,
-            Opacity = 0.72,
+            Opacity = 1.00,
             ObjectFit = "cover",
             Filter = "brightness(.58) contrast(1.15) saturate(.88)",
         },
@@ -744,7 +843,7 @@ cfg.RemoteMedia = {
             Volume = 0,
             Muted = true,
             Loop = true,
-            Opacity = 0.60,
+            Opacity = 1.00,
             ObjectFit = "cover",
             Filter = "brightness(.52) contrast(1.2) saturate(.80)",
         },
@@ -755,7 +854,7 @@ cfg.RemoteMedia = {
             Volume = 0,
             Muted = true,
             Loop = true,
-            Opacity = 0.60,
+            Opacity = 1.00,
             ObjectFit = "cover",
             Filter = "brightness(.48) contrast(1.22) saturate(.75)",
         },
@@ -785,24 +884,28 @@ cfg.RemoteMedia = {
             url = "https://www.dropbox.com/scl/fi/uwkm6t3htbdn28tl00z5b/California-Dreamin.webm?rlkey=z8pqdwouykd8vxlxd1akoq3bu&st=hk2u282r&dl=0",
             loop = true,
             muted = false,
-            volume = 0.35,
-            opacity = 0.72,
+            volume = 0.10,
+            opacity = 1.00,
             objectFit = "cover",
             filter = "brightness(.62) contrast(1.12) saturate(.92)",
         },
     },
 }
 
+-- Palette camo Vietnam : l'accent principal est un vert olive militaire.
+-- "Olive" = liserés, filets et sélections. "Accent" = kaki clair (valeurs, XP).
+-- "Red" est conservé uniquement pour les erreurs et la confirmation QUITTER.
 cfg.Colors = {
-    Accent = Color(198, 181, 94),
-    AccentDark = Color(124, 113, 55),
-    Red = Color(190, 28, 28),
-    White = Color(235, 235, 235),
-    Muted = Color(170, 170, 170),
-    Dark = Color(12, 12, 15, 220),
-    Dark2 = Color(25, 25, 29, 195),
+    Accent = Color(148, 156, 108),
+    AccentDark = Color(88, 96, 60),
+    Olive = Color(112, 126, 74),
+    Red = Color(165, 48, 40),
+    White = Color(232, 234, 222),
+    Muted = Color(168, 172, 152),
+    Dark = Color(12, 14, 11, 220),
+    Dark2 = Color(23, 26, 20, 195),
     Locked = Color(12, 12, 12, 165),
-    Line = Color(230, 230, 230, 80),
+    Line = Color(214, 220, 196, 80),
 }
 
 function cfg.GetPlayerLevel(ply)
@@ -922,7 +1025,7 @@ cfg.Armies = {
         cardImage = "medal/camps/americans.png",
         cardImageMode = "contain",
         cardOverlayText = false,
-        accent = Color(220, 220, 220),
+        accent = Color(196, 202, 168),
         characterModel = US_MODEL,
         characterModels = {US_MODEL, US_MODEL_2, US_MODEL_MEDIC},
         characterDescription = "Soldat américain engagé au Vietnam.",
@@ -966,6 +1069,10 @@ cfg.Armies = {
                     Role("medic", "MÉDECIN", "TEAM_MEDAL_US_MEDIC", "Médecin US", 4, "✚", US_MODEL_MEDIC, {
                         L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol", "med_kit"}, {Pistol = 50}, {"Trousse médicale", "Bandages"}),
                         L("medic_veteran", "COMBAT MEDIC", 3, {"weapon_pistol", "med_kit"}, {Pistol = 70}, {"Morphine", "Fumigène"}),
+                    }),
+                    Role("radioman", "RADIO", "TEAM_MEDAL_US_RADIOMAN", "Radioman US", 3, "☍", US_MODEL_2, {
+                        L("standard", "OPÉRATEUR RADIO", 1, {"weapon_pistol", "medal_radio_swep"}, {Pistol = 40}, {"Radio", "Carte tactique"}, {image = "medal/loadouts/radio.png", previewImage = "medal/loadouts/radio.png"}),
+                        L("veteran", "OPÉRATEUR VÉTÉRAN", 3, {"weapon_smg1", "weapon_pistol", "medal_radio_swep"}, {SMG1 = 90, Pistol = 40}, {"Radio", "Jumelles"}),
                     }),
                     Role("support", "SOUTIEN", "TEAM_MEDAL_US_SUPPORT", "Soutien US", 2, "✚", US_MODEL_2, {
                         L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1"}, {SMG1 = 220}, {"Munitions", "Pansement"}),
@@ -1026,7 +1133,7 @@ cfg.Armies = {
         cardImage = "medal/camps/vietcong.png",
         cardImageMode = "contain",
         cardOverlayText = false,
-        accent = Color(190, 38, 38),
+        accent = Color(150, 68, 52),
         characterModel = VC_MODEL,
         characterModels = {VC_MODEL, VC_MODEL_2, VC_MODEL_SCOUT},
         characterDescription = "Combattant Vietcong enraciné dans la jungle.",
@@ -1070,6 +1177,10 @@ cfg.Armies = {
                     Role("medic", "MÉDECIN", "TEAM_MEDAL_VC_MEDIC", "Médecin Vietcong", 4, "✚", VC_MODEL, {
                         L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol", "med_kit"}, {Pistol = 50}, {"Trousse médicale", "Bandages"}),
                         L("secouriste", "SECOURISTE", 3, {"weapon_pistol", "med_kit"}, {Pistol = 70}, {"Trousse médicale", "Morphine", "Fumigène"}),
+                    }),
+                    Role("radioman", "RADIO", "TEAM_MEDAL_VC_RADIOMAN", "Radioman Vietcong", 3, "☍", VC_MODEL_2, {
+                        L("standard", "OPÉRATEUR RADIO", 1, {"weapon_pistol", "medal_radio_swep"}, {Pistol = 40}, {"Radio", "Carte"}, {image = "medal/loadouts/radio.png", previewImage = "medal/loadouts/radio.png"}),
+                        L("veteran", "OPÉRATEUR VÉTÉRAN", 3, {"weapon_smg1", "weapon_pistol", "medal_radio_swep"}, {SMG1 = 90, Pistol = 40}, {"Radio", "Jumelles"}),
                     }),
                     Role("soutien", "SOUTIEN", "TEAM_MEDAL_VC_SUPPORT", "Soutien Vietcong", 2, "✚", VC_MODEL_2, {
                         L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1"}, {SMG1 = 220}, {"Caisse munitions", "Pansement"}),

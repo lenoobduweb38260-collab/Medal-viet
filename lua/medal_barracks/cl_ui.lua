@@ -30,6 +30,11 @@ surface.CreateFont("MedalBarracks_WepSmall", {font = "Roboto Condensed", size = 
 surface.CreateFont("MedalBarracks_HLLHeader", {font = "Roboto Condensed", size = 42, weight = 1000, extended = true})
 surface.CreateFont("MedalBarracks_HLLTab", {font = "Roboto Condensed", size = 17, weight = 900, extended = true})
 surface.CreateFont("MedalBarracks_HLLKey", {font = "Roboto Condensed", size = 14, weight = 900, extended = true})
+-- Polices "machine à écrire" pour la fiche d'enrôlement façon dossier militaire Vietnam.
+surface.CreateFont("MedalBarracks_Type", {font = "Courier New", size = 19, weight = 700, extended = true})
+surface.CreateFont("MedalBarracks_TypeSmall", {font = "Courier New", size = 14, weight = 700, extended = true})
+surface.CreateFont("MedalBarracks_Stamp", {font = "Roboto Condensed", size = 44, weight = 1000, extended = true})
+surface.CreateFont("MedalBarracks_WepCurrent", {font = "Roboto Condensed", size = 26, weight = 1000, extended = true})
 
 local function S(v)
     return math.Round(v * math.min(ScrW() / 1920, ScrH() / 1080))
@@ -73,7 +78,7 @@ end
 
 -- En-tête d'écran HLL : fil d'Ariane, grand titre espacé, filet fin sur toute la largeur.
 local function drawHLLHeader(w, crumb, title, subtitle, accent)
-    accent = accent or C("Red", Color(190, 28, 28))
+    accent = accent or C("Olive", Color(112, 126, 74))
     local x = S(72)
     drawSpacedText(crumb or "MEDAL VIETNAM", "MedalBarracks_HLLTab", x + S(2), S(34), Color(235, 235, 235, 115), S(5))
     drawSpacedText(title or "", "MedalBarracks_HLLHeader", x, S(58), Color(245, 245, 245, 240), S(6))
@@ -87,7 +92,7 @@ end
 
 -- Version centrée pour les écrans plein cadre (factions, options).
 local function drawHLLHeaderCentered(w, title, subtitle, accent)
-    accent = accent or C("Red", Color(190, 28, 28))
+    accent = accent or C("Olive", Color(112, 126, 74))
     drawSpacedText(title or "", "MedalBarracks_HLLHeader", w / 2, S(34), Color(245, 245, 245, 240), S(8), TEXT_ALIGN_CENTER)
     draw.RoundedBox(0, w / 2 - S(28), S(88), S(56), S(3), accent)
     if subtitle and subtitle ~= "" then
@@ -353,7 +358,7 @@ function MedalBarracks.FetchRemoteManifest(force, callback)
         end
         MedalBarracks.RemoteMediaManifest = data
         MedalBarracks.RemoteMediaLastFetch = CurTime()
-        MsgC(Color(198,181,94), "[MedalBarracks] Manifest média chargé depuis le serveur annexe.\n")
+        MsgC(Color(148, 156, 108), "[MedalBarracks] Manifest média chargé depuis le serveur annexe.\n")
         if callback then callback(true) end
     end, function(err)
         MsgC(Color(220,80,80), "[MedalBarracks] Impossible de récupérer le manifest média : " .. tostring(err) .. "\n")
@@ -657,7 +662,7 @@ function MedalBarracks.PlayRemoteCinematic(usageKey, callback, fallbackTitle, fa
     frame.PaintOver = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 35))
         local remain = math.max(0, dur - (SysTime() - self.started))
-        draw.RoundedBox(0, S(70), h - S(78), (w - S(140)) * (1 - remain / math.max(dur, 0.1)), S(3), C("Red", Color(190,28,28)))
+        draw.RoundedBox(0, S(70), h - S(78), (w - S(140)) * (1 - remain / math.max(dur, 0.1)), S(3), C("Olive", Color(112, 126, 74)))
         if fallbackTitle and fallbackTitle ~= "" then draw.SimpleText(fallbackTitle, "MedalBarracks_CardTitle", S(72), h - S(138), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP) end
         if skippable then draw.SimpleText("ESPACE pour passer", "MedalBarracks_RowSmall", w - S(72), h - S(88), Color(235,235,235,150), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP) end
     end
@@ -689,11 +694,11 @@ local function drawBlurPanel(panel, amount)
     end
 end
 
-local function drawMatFit(m, x, y, w, h, mode)
+local function drawMatFit(m, x, y, w, h, mode, alpha)
     if not m then return end
     local iw, ih = m:Width(), m:Height()
     surface.SetMaterial(m)
-    surface.SetDrawColor(255, 255, 255, 255)
+    surface.SetDrawColor(255, 255, 255, alpha or 255)
     if iw <= 0 or ih <= 0 then surface.DrawTexturedRect(x, y, w, h); return end
     local ir, br = iw / ih, w / h
     if mode == "cover" then
@@ -893,13 +898,13 @@ local function drawTipBox(frame, w, h)
         draw.RoundedBox(0, x, y, maxW, boxH, Color(5, 5, 7, 142))
         surface.SetDrawColor(255,255,255,42)
         surface.DrawOutlinedRect(x, y, maxW, boxH, 1)
-        draw.RoundedBox(0, x, y, S(3), boxH, C("Red", Color(190, 28, 28)))
+        draw.RoundedBox(0, x, y, S(3), boxH, C("Olive", Color(112, 126, 74)))
     end
 
     local starX = x + S(34)
     local textX = x + S(74)
-    draw.SimpleText("✦", "MedalBarracks_Icon", starX, y + boxH / 2, C("Red", Color(190, 28, 28)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-    draw.SimpleText(prefix, "MedalBarracks_Row", textX, y + S(14), C("Red", Color(190, 28, 28)), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    draw.SimpleText("✦", "MedalBarracks_Icon", starX, y + boxH / 2, C("Olive", Color(112, 126, 74)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(prefix, "MedalBarracks_Row", textX, y + S(14), C("Olive", Color(112, 126, 74)), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     for i, line in ipairs(lines) do
         draw.SimpleText(line, "MedalBarracks_Row", textX + prefixW, y + S(14) + (i - 1) * lineH, Color(235,235,235,210), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     end
@@ -1055,6 +1060,10 @@ local function runBindAction(bind)
         MedalBarracks.Open()
     elseif action == "present" then
         RunConsoleCommand((cfg.Relations and cfg.Relations.PresentConsoleCommand) or "medal_present")
+    elseif action == "open_squads" then
+        if MedalBarracks.OpenSquadMenu then MedalBarracks.OpenSquadMenu() end
+    elseif action == "quick_equip" then
+        if MedalBarracks.ToggleQuickEquip then MedalBarracks.ToggleQuickEquip() end
     elseif action ~= "" and isstring(bind.command) and bind.command ~= "" then
         RunConsoleCommand(bind.command)
     end
@@ -1073,7 +1082,7 @@ end
 
 local function drawHLLButton(self, w, h, text, sub, selected, accent, leftAlign)
     self.hoverAnim = Lerp(FrameTime() * 10, self.hoverAnim or 0, (self:IsHovered() or selected) and 1 or 0)
-    accent = accent or C("Red", Color(190, 28, 28))
+    accent = accent or C("Olive", Color(112, 126, 74))
     local hov = self.hoverAnim
 
     local da = cfg.DAStyle or {}
@@ -1125,7 +1134,7 @@ local function createButton(parent, text, sub, x, y, w, h, selectedFn, onClick, 
     b:SetPos(x, y)
     b:SetSize(w, h)
     b.Paint = function(self, pw, ph)
-        drawHLLButton(self, pw, ph, text, sub, selectedFn and selectedFn() or false, accentFn and accentFn() or C("Red", Color(190,30,30)))
+        drawHLLButton(self, pw, ph, text, sub, selectedFn and selectedFn() or false, accentFn and accentFn() or C("Olive", Color(112, 126, 74)))
     end
     b.DoClick = function()
         playButtonSound((cfg.Sounds or {}).UIClick)
@@ -1161,9 +1170,9 @@ function MedalBarracks.MakeTransition(title, subtitle, callback, soundKind, medi
         draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 170 + 65 * math.sin(t * math.pi)))
         for i = 1, 7 do
             local off = (t * ScrW() * 1.35 + i * S(190)) % (ScrW() + S(220))
-            draw.RoundedBox(0, off - S(120), 0, S(7), h, Color(190, 28, 28, 70))
+            draw.RoundedBox(0, off - S(120), 0, S(7), h, Color(112, 126, 74, 70))
         end
-        draw.RoundedBox(0, 0, h * 0.48, w * t, S(2), C("Red", Color(190,28,28)))
+        draw.RoundedBox(0, 0, h * 0.48, w * t, S(2), C("Olive", Color(112, 126, 74)))
         draw.SimpleText(title or "TRANSMISSION", "MedalBarracks_CardTitle", w / 2, h / 2 - S(25), C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         if subtitle and subtitle ~= "" then draw.SimpleText(subtitle, "MedalBarracks_Row", w / 2, h / 2 + S(18), Color(235,235,235,180), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER) end
     end
@@ -1191,7 +1200,7 @@ local function drawTitleLeft(menuCfg)
     -- "BIENVENUE SUR" très espacé, comme sur l'image de référence.
     drawSpacedText(menuCfg.Subtitle or "BIENVENUE SUR", "MedalBarracks_MenuSubtitle", x + S(3), y, Color(235, 235, 235, 175), S(8))
     draw.SimpleText(string.upper(menuCfg.Title or "MEDAL VIETNAM"), "MedalBarracks_MenuTitle", x, y + S(26), Color(245, 245, 245, 235), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-    draw.RoundedBox(0, x + S(3), y + S(100), S(340), S(2), C("Red", Color(190, 28, 28)))
+    draw.RoundedBox(0, x + S(3), y + S(100), S(340), S(2), C("Olive", Color(112, 126, 74)))
     local serverLine = menuCfg.ServerLine or "GARRY'S MOD - SERVEUR VIETNAM WAR RP"
     if serverLine and serverLine ~= "" then
         drawSpacedText(serverLine, "MedalBarracks_MenuSubtitle", x + S(3), S(tonumber(style.ServerLineY) or 405), Color(235, 235, 235, 140), S(3))
@@ -1199,11 +1208,17 @@ local function drawTitleLeft(menuCfg)
 end
 
 function MedalBarracks.OpenCharacterEditor(armyID, editing)
+    -- Fiche d'enrôlement façon dossier militaire Vietnam 1968 : typographie
+    -- machine à écrire, coins de formulaire, tampon incliné, DA Hell Let Loose.
     local army = MedalBarracks.GetArmy(armyID)
     if not army then return end
     local existing = characterFor(armyID)
+    local isUS = armyID == "americans"
+    local accent = army.accent or C("Accent")
+
     local frame = vgui.Create("DFrame")
-    frame:SetSize(S(560), S(620))
+    local fw, fh = S(820), S(760)
+    frame:SetSize(fw, fh)
     frame:Center()
     frame:SetTitle("")
     frame:ShowCloseButton(false)
@@ -1211,72 +1226,133 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
     frame:MakePopup()
     frame:SetAlpha(0)
     frame:AlphaTo(255, 0.14, 0)
+    frame.dossierNo = string.format("%04d-%02d", math.random(0, 9999), math.random(10, 99))
 
-    local function label(txt, y)
-        local l = vgui.Create("DLabel", frame)
-        l:SetPos(S(38), y)
-        l:SetSize(S(480), S(20))
-        l:SetFont("MedalBarracks_InputLabel")
-        l:SetTextColor(Color(235,235,235,220))
-        l:SetText(txt)
+    local leftX = S(46)
+
+    frame.Paint = function(self, w, h)
+        drawBlurPanel(self, 6)
+        draw.RoundedBox(0, 0, 0, w, h, Color(12, 14, 11, 246))
+        draw.RoundedBox(0, 0, 0, S(6), h, Color(accent.r, accent.g, accent.b, 235))
+        surface.SetDrawColor(214, 220, 196, 65)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+        -- Coins de formulaire militaire.
+        surface.SetDrawColor(214, 220, 196, 110)
+        for _, corner in ipairs({{S(16), S(16)}, {w - S(16), S(16)}, {S(16), h - S(16)}, {w - S(16), h - S(16)}}) do
+            surface.DrawRect(corner[1] - S(8), corner[2], S(16), 1)
+            surface.DrawRect(corner[1], corner[2] - S(8), 1, S(16))
+        end
+
+        -- En-tête HLL.
+        drawSpacedText(isUS and "MEDAL VIETNAM // ARMÉE AMÉRICAINE" or "MEDAL VIETNAM // FRONT DE LIBÉRATION", "MedalBarracks_HLLTab", leftX, S(28), Color(232, 234, 222, 120), S(4))
+        drawSpacedText(editing and "DOSSIER PERSONNEL" or "FORMULAIRE D'ENRÔLEMENT", "MedalBarracks_HLLHeader", leftX - S(2), S(48), Color(240, 242, 232, 240), S(5))
+        draw.RoundedBox(0, leftX, S(98), S(56), S(3), Color(accent.r, accent.g, accent.b, 235))
+        surface.SetDrawColor(214, 220, 196, 30)
+        surface.DrawRect(leftX + S(68), S(99), w - leftX * 2 - S(68), 1)
+
+        -- Lignes tapées à la machine : commandement, dossier, année — immersion Vietnam.
+        draw.SimpleText(isUS and "MILITARY ASSISTANCE COMMAND VIETNAM — SAIGON, RÉPUBLIQUE DU VIÊT NAM" or "FRONT NATIONAL DE LIBÉRATION — MAQUIS DU DELTA DU MÉKONG", "MedalBarracks_TypeSmall", leftX, S(112), Color(200, 205, 180, 170), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        draw.SimpleText("DOSSIER N° " .. self.dossierNo .. "   •   ANNÉE 1968   •   " .. (editing and "MISE À JOUR DU DOSSIER" or "PREMIER ENRÔLEMENT"), "MedalBarracks_TypeSmall", leftX, S(130), Color(200, 205, 180, 130), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+
+        -- Tampon incliné façon administration militaire.
+        local ax, ay = self:LocalToScreen(w - S(190), S(64))
+        local mtx = Matrix()
+        mtx:Translate(Vector(ax, ay, 0))
+        mtx:Rotate(Angle(0, -12, 0))
+        DisableClipping(true)
+        cam.PushModelMatrix(mtx)
+            local stampCol = editing and Color(112, 126, 74, 190) or Color(150, 52, 42, 190)
+            surface.SetDrawColor(stampCol)
+            surface.DrawOutlinedRect(-S(96), -S(27), S(192), S(54), S(2))
+            surface.DrawOutlinedRect(-S(90), -S(21), S(180), S(42), 1)
+            draw.SimpleText(editing and "ENRÔLÉ" or "CONFIDENTIEL", "MedalBarracks_Stamp", 0, 0, stampCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        cam.PopModelMatrix()
+        DisableClipping(false)
+
+        draw.SimpleText(editing and "Nom et prénom verrouillés après création — état civil militaire."
+            or "Le commandement décline toute responsabilité au-delà de la ligne de front.",
+            "MedalBarracks_TypeSmall", leftX, h - S(34), Color(200, 205, 180, 120), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    end
+
+    -- Libellés et champs façon formulaire tapé à la machine.
+    local function fieldLabel(txt, x, y, w)
+        local l = vgui.Create("DPanel", frame)
+        l:SetPos(x, y)
+        l:SetSize(w, S(18))
+        l.Paint = function()
+            drawSpacedText(txt, "MedalBarracks_RowSmall", 0, S(2), Color(232, 234, 222, 170), S(2))
+        end
         return l
     end
 
-    local function entry(y, value, editable, tall)
+    local function fieldEntry(x, y, w, value, editable, tall)
         local e = vgui.Create("DTextEntry", frame)
-        e:SetPos(S(38), y)
-        e:SetSize(S(485), tall or S(34))
-        e:SetFont("MedalBarracks_Row")
+        e:SetPos(x, y)
+        e:SetSize(w, tall or S(36))
+        e:SetFont("MedalBarracks_Type")
         e:SetText(value or "")
         e:SetEditable(editable ~= false)
         e:SetUpdateOnType(true)
         if tall then e:SetMultiline(true) end
+        e:SetPaintBackground(false)
+        e.Paint = function(self, pw, ph)
+            draw.RoundedBox(0, 0, 0, pw, ph, Color(19, 22, 16, editable == false and 120 or 210))
+            surface.SetDrawColor(214, 220, 196, self:HasFocus() and 130 or 45)
+            surface.DrawOutlinedRect(0, 0, pw, ph, 1)
+            -- Ligne pointillée de formulaire sous le texte.
+            surface.SetDrawColor(214, 220, 196, 55)
+            for dx = S(8), pw - S(10), S(9) do
+                surface.DrawRect(dx, ph - S(6), S(4), 1)
+            end
+            self:DrawTextEntryText(Color(226, 230, 210), Color(112, 126, 74), Color(226, 230, 210))
+        end
         return e
     end
 
-    frame.Paint = function(self, w, h)
-        drawBlurPanel(self, 6)
-        draw.RoundedBox(0, 0, 0, w, h, Color(8,8,10,238))
-        draw.RoundedBox(0, 0, 0, S(6), h, army.accent or C("Accent"))
-        surface.SetDrawColor(255,255,255,60)
-        surface.DrawOutlinedRect(0, 0, w, h, 1)
-        draw.SimpleText(editing and "MODIFIER LE PERSONNAGE" or "CRÉER LE PERSONNAGE", "MedalBarracks_CardTitle", S(38), S(28), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        if editing then draw.SimpleText("Nom et prénom verrouillés après création.", "MedalBarracks_Row", S(38), S(67), Color(235,235,235,160), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP) end
-    end
+    local colW = math.floor((fw - leftX * 2 - S(24)) / 2)
+    local rightColX = leftX + colW + S(24)
+    local y0 = S(168)
 
-    label("PRÉNOM", S(112))
-    local first = entry(S(136), existing and existing.firstName or "", not editing)
-    label("NOM", S(180))
-    local last = entry(S(204), existing and existing.lastName or "", not editing)
-    label("ÂGE", S(248))
-    local age = entry(S(272), existing and tostring(existing.age or 18) or "18", true)
-    label("NATIONALITÉ / ORIGINE", S(316))
-    local nat = entry(S(340), existing and existing.nationality or (armyID == "americans" and "Américaine" or "Vietnamienne"), true)
-    label("DESCRIPTION", S(384))
-    local desc = entry(S(408), existing and existing.description or "", true, S(94))
+    fieldLabel("PRÉNOM", leftX, y0, colW)
+    local first = fieldEntry(leftX, y0 + S(22), colW, existing and existing.firstName or "", not editing)
+    fieldLabel("NOM", rightColX, y0, colW)
+    local last = fieldEntry(rightColX, y0 + S(22), colW, existing and existing.lastName or "", not editing)
+
+    local y1 = y0 + S(80)
+    fieldLabel("ÂGE", leftX, y1, colW)
+    local age = fieldEntry(leftX, y1 + S(22), colW, existing and tostring(existing.age or 18) or "18", true)
+    fieldLabel("NATIONALITÉ / ORIGINE", rightColX, y1, colW)
+    local nat = fieldEntry(rightColX, y1 + S(22), colW, existing and existing.nationality or (isUS and "Américaine" or "Vietnamienne"), true)
+
+    local y2 = y1 + S(80)
+    fieldLabel("ANTÉCÉDENTS / DESCRIPTION DU SOLDAT", leftX, y2, fw - leftX * 2)
+    local desc = fieldEntry(leftX, y2 + S(22), fw - leftX * 2, existing and existing.description or "", true, S(160))
 
     local model = existing and existing.model or defaultCharModel(army)
     if (cfg.CharacterCreation or {}).AllowModelChoice == true and istable(army.characterModels) then
-        label("MODÈLE", S(512))
+        local y3 = y2 + S(200)
+        fieldLabel("MODÈLE", leftX, y3, colW)
         local combo = vgui.Create("DComboBox", frame)
-        combo:SetPos(S(38), S(536))
-        combo:SetSize(S(485), S(32))
+        combo:SetPos(leftX, y3 + S(22))
+        combo:SetSize(colW, S(32))
         for _, mdl in ipairs(army.characterModels) do combo:AddChoice(mdl, mdl, mdl == model) end
         combo.OnSelect = function(_, _, _, data) model = data end
     end
 
+    local btnY = fh - S(102)
     local cancel = vgui.Create("DButton", frame)
     cancel:SetText("")
-    cancel:SetPos(S(38), S(552))
-    cancel:SetSize(S(170), S(46))
-    cancel.Paint = function(self, w, h) drawHLLButton(self, w, h, "RETOUR", "", false, C("Red", Color(190,30,30)), false) end
+    cancel:SetPos(leftX, btnY)
+    cancel:SetSize(S(180), S(48))
+    cancel.Paint = function(self, w, h) drawHLLButton(self, w, h, "RETOUR", "", false, Color(120, 120, 120), false) end
     cancel.DoClick = function() playButtonSound((cfg.Sounds or {}).UIBack); frame:Remove() end
 
     local save = vgui.Create("DButton", frame)
     save:SetText("")
-    save:SetPos(S(225), S(552))
-    save:SetSize(S(298), S(46))
-    save.Paint = function(self, w, h) drawHLLButton(self, w, h, editing and "ENREGISTRER" or "CRÉER", "", false, army.accent or C("Accent"), false) end
+    save:SetPos(fw - leftX - S(330), btnY)
+    save:SetSize(S(330), S(48))
+    save.Paint = function(self, w, h) drawHLLButton(self, w, h, editing and "ENREGISTRER LE DOSSIER" or "SIGNER L'ENRÔLEMENT", "", false, accent, false) end
     save.DoClick = function()
         local a = math.Clamp(tonumber(age:GetText()) or 18, 0, 120)
         if editing then
@@ -1612,7 +1688,7 @@ function MedalBarracks.OpenMainMenu(initialState, force)
             local bw, bh = S(560), S(230)
             local x, y = w / 2 - bw / 2, h / 2 - bh / 2
             draw.RoundedBox(0, x, y, bw, bh, Color(8,8,10,240))
-            draw.RoundedBox(0, x, y, S(6), bh, C("Red", Color(190,30,30)))
+            draw.RoundedBox(0, x, y, S(6), bh, C("Red", Color(165, 48, 40)))
             surface.SetDrawColor(255,255,255,70)
             surface.DrawOutlinedRect(x, y, bw, bh, 1)
             drawSpacedText("QUITTER LE SERVEUR ?", "MedalBarracks_CardTitle", w / 2, y + S(34), C("White"), S(3), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
@@ -1621,7 +1697,7 @@ function MedalBarracks.OpenMainMenu(initialState, force)
         local bw, bh = S(560), S(230)
         local x, y = ScrW() / 2 - bw / 2, ScrH() / 2 - bh / 2
         createButton(overlay, "ANNULER", "", x + S(48), y + S(155), S(210), S(52), nil, function() overlay:Remove() end, function() return Color(130,130,130) end)
-        createButton(overlay, "CONFIRMER", "", x + S(300), y + S(155), S(210), S(52), nil, function() RunConsoleCommand("disconnect") end, function() return C("Red", Color(190,30,30)) end)
+        createButton(overlay, "CONFIRMER", "", x + S(300), y + S(155), S(210), S(52), nil, function() RunConsoleCommand("disconnect") end, function() return C("Red", Color(165, 48, 40)) end)
     end
 
     local function showOptions()
@@ -1683,12 +1759,12 @@ function MedalBarracks.OpenMainMenu(initialState, force)
                     row:SetText("")
                     row.Paint = function(self, w, h)
                         local selected = editingBind == bind
-                        drawHLLButton(self, w, h, "", "", selected, selected and C("Accent") or C("Red", Color(190,30,30)))
+                        drawHLLButton(self, w, h, "", "", selected, selected and C("Accent") or C("Olive", Color(112, 126, 74)))
                         draw.SimpleText(string.upper(bind.label or bind.id or "BIND"), "MedalBarracks_H2", S(26), S(13), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
                         draw.SimpleText(bind.description or "", "MedalBarracks_RowSmall", S(26), S(43), Color(235,235,235,160), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
                         local key = getBindKey(bind)
                         local boxW = S(190)
-                        draw.RoundedBox(0, w - boxW - S(18), S(15), boxW, h - S(30), selected and Color(198,181,94,190) or Color(8,8,10,210))
+                        draw.RoundedBox(0, w - boxW - S(18), S(15), boxW, h - S(30), selected and Color(148, 156, 108, 190) or Color(8,8,10,210))
                         surface.SetDrawColor(255,255,255, selected and 150 or 60)
                         surface.DrawOutlinedRect(w - boxW - S(18), S(15), boxW, h - S(30), 1)
                         draw.SimpleText(selected and "..." or keyName(key), "MedalBarracks_H2", w - boxW / 2 - S(18), h / 2, C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -1707,11 +1783,11 @@ function MedalBarracks.OpenMainMenu(initialState, force)
                     row:SetText("")
                     row.Paint = function(self, w, h)
                         local selected = istable(editingBind) and editingBind.__gmod == true and editingBind.command == bind.command
-                        drawHLLButton(self, w, h, "", "", selected, selected and C("Accent") or C("Red", Color(190,30,30)))
+                        drawHLLButton(self, w, h, "", "", selected, selected and C("Accent") or C("Olive", Color(112, 126, 74)))
                         draw.SimpleText(string.upper(bind.label or bind.id or bind.command or "BIND GMOD"), "MedalBarracks_H2", S(26), S(13), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
                         draw.SimpleText("Commande : " .. tostring(bind.command or ""), "MedalBarracks_RowSmall", S(26), S(43), Color(235,235,235,150), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
                         local boxW = S(210)
-                        draw.RoundedBox(0, w - boxW - S(18), S(15), boxW, h - S(30), selected and Color(198,181,94,190) or Color(8,8,10,210))
+                        draw.RoundedBox(0, w - boxW - S(18), S(15), boxW, h - S(30), selected and Color(148, 156, 108, 190) or Color(8,8,10,210))
                         surface.SetDrawColor(255,255,255, selected and 150 or 60)
                         surface.DrawOutlinedRect(w - boxW - S(18), S(15), boxW, h - S(30), 1)
                         draw.SimpleText(selected and "..." or getGModBindName(bind), "MedalBarracks_H2", w - boxW / 2 - S(18), h / 2, C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -1733,7 +1809,7 @@ function MedalBarracks.OpenMainMenu(initialState, force)
                     pnl:SetTall(S(92))
                     pnl.Paint = function(self, w, h)
                         draw.RoundedBox(0, 0, 0, w, h, Color(9, 9, 11, 185))
-                        draw.RoundedBox(0, 0, 0, S(5), h, C("Red", Color(190,30,30)))
+                        draw.RoundedBox(0, 0, 0, S(5), h, C("Olive", Color(112, 126, 74)))
                         surface.SetDrawColor(255,255,255,45)
                         surface.DrawOutlinedRect(0, 0, w, h, 1)
                         draw.SimpleText(string.upper(setting.label or setting.id or setting.convar or "RÉGLAGE"), "MedalBarracks_H2", S(26), S(14), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
@@ -1801,7 +1877,7 @@ function MedalBarracks.OpenMainMenu(initialState, force)
                 activeTab = tab.id
                 editingBind = nil
                 rebuild()
-            end, function() return activeTab == tab.id and C("Accent") or C("Red", Color(190,30,30)) end)
+            end, function() return activeTab == tab.id and C("Accent") or C("Olive", Color(112, 126, 74)) end)
             b:SetZPos(180)
         end
 
@@ -2180,7 +2256,7 @@ function MedalBarracks.Open(preferredArmyID, slide)
             row.Paint = function(self, w, h)
                 local selected = frame.selectedLoadout == loadout
                 local ok = levelOK(army().id, role, loadout)
-                drawHLLButton(self, w, h, "", "", selected, selected and accent() or C("Red", Color(190,30,30)))
+                drawHLLButton(self, w, h, "", "", selected, selected and accent() or C("Olive", Color(112, 126, 74)))
                 draw.RoundedBox(0, 0, 0, S(116), h, Color(5,5,7,190))
                 local im = loadoutImage(loadout)
                 if im then drawMatFit(im, S(10), S(7), S(96), h - S(14), "contain") else drawWeaponSilhouette(S(10), S(7), S(95), h - S(14), loadout.weapons and loadout.weapons[1], ok and 225 or 90) end
@@ -2222,7 +2298,7 @@ function MedalBarracks.Open(preferredArmyID, slide)
                 local roleIcon = mat(role.iconMaterial or role.materialIcon or role.iconImage)
                 row.Paint = function(self, w, h)
                     local selected = frame.selectedRole == role
-                    drawHLLButton(self, w, h, "", "", selected, selected and accent() or C("Red", Color(190,30,30)))
+                    drawHLLButton(self, w, h, "", "", selected, selected and accent() or C("Olive", Color(112, 126, 74)))
                     local txtCol = selected and C("White") or Color(235,235,235,220)
                     if roleIcon then drawMatFit(roleIcon, S(12), S(7), S(28), h - S(14), "contain") else draw.SimpleText(role.icon or "•", "MedalBarracks_Row", S(26), h / 2, txtCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER) end
                     drawSpacedText(role.name, "MedalBarracks_Row", S(54), h / 2, txtCol, S(2), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
@@ -2319,7 +2395,7 @@ local function openStaffEditor(row)
     f.Paint = function(self, w, h)
         drawBlurPanel(self, 6)
         draw.RoundedBox(0, 0, 0, w, h, Color(8,8,10,242))
-        draw.RoundedBox(0, 0, 0, S(6), h, C("Red", Color(190,30,30)))
+        draw.RoundedBox(0, 0, 0, S(6), h, C("Olive", Color(112, 126, 74)))
         surface.SetDrawColor(255,255,255,65)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
         draw.SimpleText("STAFF — MODIFIER PERSONNAGE", "MedalBarracks_CardTitle", S(38), S(28), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
@@ -2386,7 +2462,7 @@ function MedalBarracks.OpenStaffMenu()
             pnl:SetTall(S(84))
             pnl.Paint = function(self, w, h)
                 draw.RoundedBox(0, 0, 0, w, h, Color(8,8,10,210))
-                draw.RoundedBox(0, 0, 0, S(5), h, C("Red", Color(190,30,30)))
+                draw.RoundedBox(0, 0, 0, S(5), h, C("Olive", Color(112, 126, 74)))
                 surface.SetDrawColor(255,255,255,45)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
                 draw.SimpleText(string.upper((row.firstName or "") .. " " .. (row.lastName or "")), "MedalBarracks_H2", S(24), S(12), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
@@ -2402,7 +2478,7 @@ function MedalBarracks.OpenStaffMenu()
                         net.WriteString(row.army or "")
                     net.SendToServer()
                 end, "Annuler")
-            end, function() return C("Red", Color(190,30,30)) end)
+            end, function() return C("Olive", Color(112, 126, 74)) end)
         end
     end
     frame.Rebuild = rebuild
@@ -2505,7 +2581,7 @@ net.Receive("MedalBarracks_CampResult", function()
     local msg = net.ReadString()
     local armyID = net.ReadString()
     notification.AddLegacy(msg, ok and NOTIFY_GENERIC or NOTIFY_ERROR, 4)
-    chat.AddText(ok and Color(198,181,94) or Color(220,70,70), "[Camp] ", color_white, msg)
+    chat.AddText(ok and Color(148, 156, 108) or Color(220,70,70), "[Camp] ", color_white, msg)
     playSound(ok and ((cfg.Sounds or {}).UIClick) or ((cfg.Sounds or {}).UIBack))
     if ok and IsValid(MedalBarracks.MainFrame) then MedalBarracks.MainFrame:AlphaTo(0, 0.12, 0, function(_, p) if IsValid(p) then p:Remove() end end) end
 end)
@@ -2515,7 +2591,7 @@ net.Receive("MedalBarracks_CharacterResult", function()
     local msg = net.ReadString()
     local armyID = net.ReadString()
     notification.AddLegacy(msg, ok and NOTIFY_GENERIC or NOTIFY_ERROR, 4)
-    chat.AddText(ok and Color(198,181,94) or Color(220,70,70), "[Personnage] ", color_white, msg)
+    chat.AddText(ok and Color(148, 156, 108) or Color(220,70,70), "[Personnage] ", color_white, msg)
     playSound(ok and ((cfg.Sounds or {}).CharacterCreated) or ((cfg.Sounds or {}).UIBack))
     if ok then
         MedalBarracks.RequestCharacters()
@@ -2527,7 +2603,7 @@ net.Receive("MedalBarracks_Result", function()
     local ok = net.ReadBool()
     local msg = net.ReadString()
     notification.AddLegacy(msg, ok and NOTIFY_GENERIC or NOTIFY_ERROR, 4)
-    chat.AddText(ok and Color(198,181,94) or Color(220,70,70), "[Caserne] ", color_white, msg)
+    chat.AddText(ok and Color(148, 156, 108) or Color(220,70,70), "[Caserne] ", color_white, msg)
     playSound(ok and ((cfg.Sounds or {}).RoleSelected) or ((cfg.Sounds or {}).UIBack))
     if ok then MedalBarracks.StopMenuAmbient() end
     if ok and IsValid(MedalBarracks.Frame) then MedalBarracks.Frame:AlphaTo(0, 0.16, 0, function(_, p) if IsValid(p) then p:Remove() end end) end
@@ -2582,11 +2658,39 @@ local function weaponIconMaterial(wep)
     return mat(path), path
 end
 
-hook.Add("PlayerBindPress", "MedalBarracks_ShowWeaponSelectorOnBind", function(ply, bind, pressed)
+hook.Add("PlayerBindPress", "MedalBarracks_WeaponSelectorBinds", function(ply, bind, pressed)
     if ply ~= LocalPlayer() or not pressed then return end
+    local wc = wsCfg()
+    if wc.Enabled == false then return end
     local b = string.lower(tostring(bind or ""))
-    if string.find(b, "invnext", 1, true) or string.find(b, "invprev", 1, true) or string.find(b, "slot", 1, true) or string.find(b, "+attack", 1, true) then
-        showWeaponSelector()
+    if string.find(b, "+attack", 1, true) then return end -- ne bloque jamais le tir
+
+    local weps = ply:GetWeapons()
+    if #weps <= 0 then return end
+
+    -- Molette : changement d'arme immédiat, comme sur Hell Let Loose.
+    if wc.ScrollSwitch ~= false and (string.find(b, "invnext", 1, true) or string.find(b, "invprev", 1, true)) then
+        local active = ply:GetActiveWeapon()
+        local idx = 1
+        for i, w in ipairs(weps) do if w == active then idx = i break end end
+        local dir = string.find(b, "invnext", 1, true) and 1 or -1
+        local target = weps[((idx - 1 + dir) % #weps) + 1]
+        if IsValid(target) then
+            input.SelectWeapon(target)
+            showWeaponSelector()
+        end
+        return true -- bloque la sélection HL2 par défaut
+    end
+
+    -- Touches 1-9 : slot direct dans l'ordre de la pile.
+    local slotNum = tonumber(string.match(b, "^slot(%d+)$"))
+    if slotNum then
+        local target = weps[slotNum]
+        if IsValid(target) then
+            input.SelectWeapon(target)
+            showWeaponSelector()
+        end
+        return true
     end
 end)
 
@@ -2608,62 +2712,245 @@ hook.Add("HUDPaint", "MedalBarracks_WeaponSelectorPaint", function()
     if wc.Enabled == false then return end
     local ply = LocalPlayer()
     if not IsValid(ply) or not ply:Alive() then return end
+    if ply:GetNWBool("MedalBarracks_InMenu", false) then return end
     local weps = ply:GetWeapons()
     if #weps <= 0 then return end
     local active = ply:GetActiveWeapon()
     if not IsValid(active) then return end
 
+    local rightX = ScrW() - S(tonumber(wc.RightMargin) or 42)
+    local bottomY = ScrH() - S(tonumber(wc.BottomMargin) or 118)
+
+    -- ===== Bloc ARME ACTUELLE permanent, comme le CURRENT WEAPON de HLL =====
+    local curIconW, curIconH = S(120), S(54)
+    local sepX = rightX - S(190)
+    local iconM = weaponIconMaterial(active)
+    if iconM then
+        drawMatFit(iconM, sepX - curIconW - S(18), bottomY - curIconH, curIconW, curIconH, "contain", 235)
+    else
+        drawWeaponSilhouette(sepX - curIconW - S(18), bottomY - curIconH, curIconW, curIconH, active:GetClass(), 225)
+    end
+    surface.SetDrawColor(232, 234, 222, 90)
+    surface.DrawRect(sepX, bottomY - S(58), 1, S(56))
+    draw.SimpleText(string.upper(tostring(wc.CurrentLabel or "ARME ACTUELLE")), "MedalBarracks_WepSmall", sepX + S(14), bottomY - S(52), Color(232, 234, 222, 150), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    draw.SimpleText(weaponDisplayName(active), "MedalBarracks_WepCurrent", sepX + S(14), bottomY - S(34), Color(240, 242, 232, 235), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+
+    -- ===== Pile de silhouettes, visible quelques secondes après un changement =====
     local remaining = weaponSelectorUntil - CurTime()
     if remaining <= 0 then return end
     local fadeTime = tonumber(wc.FadeTime) or 0.35
-    local alpha = math.Clamp(remaining / math.max(fadeTime, 0.01), 0, 1)
-    alpha = math.Clamp(alpha * 255, 0, 255)
+    local alpha = math.Clamp(remaining / math.max(fadeTime, 0.01), 0, 1) * 255
 
+    local iconH = S(tonumber(wc.IconH) or 40)
+    local iconW = math.Round(iconH * 2.6)
+    local gap = S(tonumber(wc.IconGap) or 10)
     local maxItems = tonumber(wc.MaxItems) or 7
-    local itemH = S(tonumber(wc.ItemH) or 48)
-    local itemW = S(tonumber(wc.ItemW) or 300)
-    local gap = S(tonumber(wc.Gap) or 7)
-    local pad = S(tonumber(wc.Padding) or 18)
-    local x = ScrW() - itemW - S(tonumber(wc.RightMargin) or 42)
-    local y = ScrH() - S(tonumber(wc.BottomMargin) or 128)
+
     local activeIndex = 1
     for i, wep in ipairs(weps) do if wep == active then activeIndex = i break end end
     local first = math.max(1, math.min(activeIndex - math.floor(maxItems / 2), math.max(1, #weps - maxItems + 1)))
     local last = math.min(#weps, first + maxItems - 1)
-    local count = last - first + 1
-    y = y - (count - 1) * (itemH + gap)
 
-    local panelMat = mat(wc.PanelMaterial or "")
-    local slotMat = mat(wc.SlotMaterial or "")
+    local y = bottomY - S(96) - (last - first + 1) * (iconH + gap)
     for idx = first, last do
         local wep = weps[idx]
-        local selected = wep == active
-        local rowY = y + (idx - first) * (itemH + gap)
-        local rowAlpha = selected and alpha or alpha * 0.66
-        local rowX = x + (selected and 0 or S(34))
-        local rowW = selected and itemW or itemW - S(46)
-        if panelMat then
-            surface.SetMaterial(panelMat)
-            surface.SetDrawColor(255,255,255,rowAlpha)
-            surface.DrawTexturedRect(rowX, rowY, rowW, itemH)
-        else
-            draw.RoundedBox(0, rowX, rowY, rowW, itemH, Color(5,5,7, rowAlpha * 0.72))
-            surface.SetDrawColor(255,255,255, selected and rowAlpha * 0.48 or rowAlpha * 0.16)
-            surface.DrawOutlinedRect(rowX, rowY, rowW, itemH, 1)
+        if IsValid(wep) then
+            local selected = wep == active
+            local rowY = y + (idx - first) * (iconH + gap)
+            if selected then
+                -- Bandeau clair translucide derrière l'arme courante, comme sur HLL.
+                draw.RoundedBox(0, rightX - iconW - S(56), rowY - S(5), iconW + S(56), iconH + S(10), Color(235, 238, 226, alpha * 0.32))
+            end
+            local a = selected and alpha or alpha * 0.62
+            local im = weaponIconMaterial(wep)
+            if im then
+                drawMatFit(im, rightX - iconW - S(14), rowY, iconW, iconH, "contain", a)
+            else
+                drawWeaponSilhouette(rightX - iconW - S(14), rowY, iconW, iconH, wep:GetClass(), a)
+            end
         end
-        if selected then draw.RoundedBox(0, rowX, rowY, S(4), itemH, C("Red", Color(190,28,28, rowAlpha))) end
-        local iconM = weaponIconMaterial(wep)
-        if iconM then
-            drawMatFit(iconM, rowX + pad, rowY + S(7), S(78), itemH - S(14), "contain")
-        else
-            drawWeaponSilhouette(rowX + pad, rowY + S(7), S(78), itemH - S(14), wep:GetClass(), rowAlpha)
+    end
+end)
+
+-- =========================
+-- Équipement rapide : grenades, bandages, trousse médicale…
+-- Touche B par défaut (cfg.Keybinds, id "quick_equip").
+-- =========================
+local function quickEquipItems()
+    local qe = cfg.QuickEquip or {}
+    local ply = LocalPlayer()
+    local out = {}
+    if not IsValid(ply) then return out end
+    for _, wep in ipairs(ply:GetWeapons()) do
+        local class = string.lower(wep:GetClass())
+        local blocked = istable(qe.Blacklist) and qe.Blacklist[class]
+        if not blocked then
+            local isEquip = istable(qe.Classes) and qe.Classes[class] or false
+            if not isEquip then
+                for _, pat in ipairs(qe.Patterns or {}) do
+                    if string.find(class, tostring(pat), 1, true) then isEquip = true break end
+                end
+            end
+            if isEquip then table.insert(out, wep) end
         end
-        if selected then
-            draw.SimpleText("CURRENT WEAPON", "MedalBarracks_WepSmall", rowX + S(112), rowY + S(8), Color(235,235,235,rowAlpha * 0.58), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            draw.SimpleText(weaponDisplayName(wep), "MedalBarracks_WepName", rowX + S(112), rowY + S(22), Color(245,245,245,rowAlpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        else
-            draw.SimpleText(weaponDisplayName(wep), "MedalBarracks_WepSmall", rowX + S(112), rowY + itemH / 2, Color(235,235,235,rowAlpha * 0.72), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+    return out
+end
+
+function MedalBarracks.ToggleQuickEquip()
+    local qe = cfg.QuickEquip or {}
+    if qe.Enabled == false then return end
+    if IsValid(MedalBarracks.QuickEquipPanel) then MedalBarracks.QuickEquipPanel:Remove(); return end
+    local ply = LocalPlayer()
+    if not IsValid(ply) or not ply:Alive() then return end
+
+    local items = quickEquipItems()
+    if #items <= 0 then
+        notification.AddLegacy("Aucun équipement disponible (grenades, bandages…).", NOTIFY_HINT, 2)
+        return
+    end
+
+    local itemW, itemH, gap = S(126), S(100), S(10)
+    local totalW = #items * itemW + (#items - 1) * gap + S(36)
+    local totalH = itemH + S(58)
+
+    local p = vgui.Create("DPanel")
+    MedalBarracks.QuickEquipPanel = p
+    p:SetSize(totalW, totalH)
+    p:SetPos(ScrW() / 2 - totalW / 2, ScrH() - S(330))
+    p:MakePopup()
+    p:SetKeyboardInputEnabled(false)
+    p.die = SysTime() + 8
+
+    p.Paint = function(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, Color(10, 12, 9, 215))
+        draw.RoundedBox(0, 0, 0, S(4), h, C("Olive", Color(112, 126, 74)))
+        surface.SetDrawColor(214, 220, 196, 55)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        drawSpacedText(tostring(qe.Title or "ÉQUIPEMENT"), "MedalBarracks_RowSmall", S(20), S(12), Color(232, 234, 222, 170), S(3))
+    end
+    p.Think = function(self)
+        if SysTime() > self.die or not IsValid(LocalPlayer()) or not LocalPlayer():Alive() then self:Remove() end
+    end
+
+    for i, wep in ipairs(items) do
+        local b = vgui.Create("DButton", p)
+        b:SetText("")
+        b:SetPos(S(18) + (i - 1) * (itemW + gap), S(38))
+        b:SetSize(itemW, itemH)
+        b.Paint = function(self, w, h)
+            self.hoverAnim = Lerp(FrameTime() * 10, self.hoverAnim or 0, self:IsHovered() and 1 or 0)
+            draw.RoundedBox(0, 0, 0, w, h, Color(18, 21, 15, 175 + self.hoverAnim * 60))
+            surface.SetDrawColor(214, 220, 196, 30 + self.hoverAnim * 90)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            if not IsValid(wep) then return end
+            local im = weaponIconMaterial(wep)
+            if im then
+                drawMatFit(im, S(14), S(10), w - S(28), h - S(46), "contain")
+            else
+                drawWeaponSilhouette(S(14), S(10), w - S(28), h - S(46), wep:GetClass(), 225)
+            end
+            draw.SimpleText(tostring(i), "MedalBarracks_RowSmall", S(8), S(6), C("Accent", Color(148, 156, 108)), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            draw.SimpleText(weaponDisplayName(wep), "MedalBarracks_WepSmall", w / 2, h - S(16), Color(232, 234, 222, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
+        b.DoClick = function()
+            if IsValid(wep) then
+                input.SelectWeapon(wep)
+                showWeaponSelector()
+            end
+            p:Remove()
+        end
+    end
+end
+
+-- =========================
+-- Menu d'interaction E : viser un soldat proche et appuyer sur E.
+-- Se présenter (relations RP) ou l'inviter dans son escouade.
+-- =========================
+local function openInteractMenu(target)
+    if IsValid(MedalBarracks.InteractMenu) then MedalBarracks.InteractMenu:Remove() end
+    if not IsValid(target) then return end
+
+    local options = {}
+    table.insert(options, {
+        label = "SE PRÉSENTER",
+        desc = "Décline ton identité aux soldats proches.",
+        accent = C("Olive", Color(112, 126, 74)),
+        action = function() RunConsoleCommand((cfg.Relations and cfg.Relations.PresentConsoleCommand) or "medal_present") end,
+    })
+    if LocalPlayer():GetNWBool("MedalBarracks_SquadLeader", false) and MedalBarracks.SquadAction then
+        table.insert(options, {
+            label = "INVITER DANS L'ESCOUADE",
+            desc = "Recrute ce soldat dans ton escouade.",
+            accent = C("Accent", Color(148, 156, 108)),
+            action = function() MedalBarracks.SquadAction("invite", target:EntIndex()) end,
+        })
+    end
+    if MedalBarracks.OpenSquadMenu then
+        table.insert(options, {
+            label = "ESCOUADES",
+            desc = "Ouvre le menu des escouades de ta faction.",
+            accent = Color(130, 130, 130),
+            action = function() MedalBarracks.OpenSquadMenu() end,
+        })
+    end
+
+    local rowH, pad = S(52), S(16)
+    local pw = S(340)
+    local ph = S(56) + #options * (rowH + S(8)) + pad
+    local p = vgui.Create("DPanel")
+    MedalBarracks.InteractMenu = p
+    p:SetSize(pw, ph)
+    p:SetPos(ScrW() / 2 + S(90), ScrH() / 2 - ph / 2)
+    p:MakePopup()
+    p:SetKeyboardInputEnabled(false)
+    p.die = SysTime() + 8
+
+    p.Paint = function(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, Color(10, 12, 9, 228))
+        draw.RoundedBox(0, 0, 0, S(4), h, C("Olive", Color(112, 126, 74)))
+        surface.SetDrawColor(214, 220, 196, 55)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        drawSpacedText("INTERACTION", "MedalBarracks_RowSmall", S(20), S(12), Color(232, 234, 222, 175), S(3))
+        draw.SimpleText("Soldat à proximité", "MedalBarracks_RowSmall", S(20), S(30), Color(232, 234, 222, 120), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    end
+    p.Think = function(self)
+        if SysTime() > self.die or not IsValid(target) or not IsValid(LocalPlayer())
+            or target:GetPos():Distance(LocalPlayer():GetPos()) > 320 then
+            self:Remove()
+        end
+    end
+
+    for i, opt in ipairs(options) do
+        local b = vgui.Create("DButton", p)
+        b:SetText("")
+        b:SetPos(pad, S(56) + (i - 1) * (rowH + S(8)))
+        b:SetSize(pw - pad * 2, rowH)
+        b.Paint = function(self, w, h)
+            self.hoverAnim = Lerp(FrameTime() * 10, self.hoverAnim or 0, self:IsHovered() and 1 or 0)
+            draw.RoundedBox(0, 0, 0, w, h, Color(18, 21, 15, 175 + self.hoverAnim * 60))
+            draw.RoundedBox(0, 0, 0, S(3), h, opt.accent)
+            surface.SetDrawColor(214, 220, 196, 28 + self.hoverAnim * 85)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            draw.SimpleText(opt.label, "MedalBarracks_Row", S(16), S(8), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            draw.SimpleText(opt.desc, "MedalBarracks_RowSmall", S(16), S(30), Color(232, 234, 222, 130), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        end
+        b.DoClick = function()
+            opt.action()
+            if IsValid(p) then p:Remove() end
+        end
+    end
+end
+
+hook.Add("PlayerBindPress", "MedalBarracks_InteractMenu", function(ply, bind, pressed)
+    if ply ~= LocalPlayer() or not pressed then return end
+    if not string.find(string.lower(tostring(bind or "")), "+use", 1, true) then return end
+    if IsValid(MedalBarracks.InteractMenu) then MedalBarracks.InteractMenu:Remove(); return true end
+    local tr = ply:GetEyeTrace()
+    local dist = (tonumber(cfg.Relations and cfg.Relations.PresentDistance) or 150) + 70
+    if IsValid(tr.Entity) and tr.Entity:IsPlayer() and tr.Entity:GetPos():Distance(ply:GetPos()) <= dist then
+        openInteractMenu(tr.Entity)
+        return true
     end
 end)
 
@@ -2701,7 +2988,7 @@ net.Receive("MedalBarracks_XPNotify", function()
     if newLevel > oldLevel then msg = msg .. " | Niveau " .. tostring(newLevel) .. " atteint" end
 
     notification.AddLegacy(msg, NOTIFY_GENERIC, 3)
-    chat.AddText(Color(198,181,94), prefix, color_white, msg)
+    chat.AddText(Color(148, 156, 108), prefix, color_white, msg)
 end)
 
 concommand.Add("medal_media_reload", function()

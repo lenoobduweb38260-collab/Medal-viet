@@ -1,4 +1,64 @@
-# Medal Barracks Menu Vietnam — v16 UI Hell Let Loose
+# Medal Barracks Menu Vietnam — v17 Escouades, Radioman & DA camo
+
+## v17 — Escouades HLL, Radioman, weapon selector molette, palette camo
+
+### Palette camo
+Les couleurs passent sur une base **vert olive / kaki** (`cfg.Colors` : `Olive`, `Accent`).
+Le rouge est réservé aux erreurs et à la confirmation QUITTER. Les vidéos Dropbox
+tournent désormais avec **opacité 1.0** et **volume 0.10**.
+
+### HUD GMod entièrement retiré
+`cfg.HideDefaultHUD` masque maintenant tous les éléments HL2 (santé, munitions,
+dégâts, train, geiger, zoom…). Seul le chat reste actif (nécessaire au RP et à la radio).
+
+### Weapon selector façon HLL (bas droite)
+- Bloc **ARME ACTUELLE** permanent : grande silhouette + nom, comme le
+  "CURRENT WEAPON / FELDSPATEN" de HLL.
+- Pile de silhouettes au-dessus lors d'un changement d'arme, l'arme courante
+  est surlignée par un bandeau clair translucide.
+- **La molette change d'arme directement** (`cfg.WeaponSelector.ScrollSwitch`),
+  les touches 1-9 sélectionnent le slot correspondant.
+
+### Équipement rapide (touche B)
+`cfg.QuickEquip` + bind `quick_equip` : un bandeau HLL liste les équipements
+tenus (grenades, bandages, trousse médicale, outils… détectés par motifs de
+class configurables) — clique pour équiper. Pensé pour les médecins & grenadiers.
+
+### Menu E (interaction)
+Vise un soldat proche et appuie sur **E** : menu contextuel HLL avec
+**SE PRÉSENTER** (relations RP existantes), **INVITER DANS L'ESCOUADE**
+(si tu es chef d'escouade) et l'accès au menu escouades.
+
+### Escouades façon Hell Let Loose
+- `cfg.Squads` : noms ABLE/BAKER/CHARLIE…, 6 membres max, le créateur est SL.
+- Menu escouades (touche **K** ou `medal_squads`) : créer, rejoindre, quitter, exclure.
+- Invitations avec panneau ACCEPTER/REFUSER.
+- **HUD bas-gauche** : nom d'escouade + membres avec ★ pour le SL, comme HLL.
+- Chat commandement : **/sl message** (commandant, officiers, chefs d'escouade).
+
+### Radioman & radio de campagne
+- Nouveau rôle **RADIO** (`radioman`) dans l'infanterie US et Vietcong, équipé du
+  SWEP `medal_radio_swep`.
+- **Pose de la radio** : clic droit = fantôme de placement (**vert** si valide,
+  rouge sinon), **maintenir clic gauche** = jauge circulaire qui pose la radio à 100%.
+- Props configurable : `cfg.Radio.PropModel`.
+- **E sur la radio posée** : menu avec **animation de recherche de fréquence**
+  (aiguille qui balaie la bande), puis choix : RÉSEAU RADIO (31.00 MHz) ou
+  COMMANDEMENT (38.50 MHz). Le propriétaire peut remballer sa radio.
+- Règles d'écoute :
+  - `/radio` : tous les radiomen de la faction l'entendent **toujours** ;
+  - `/sl` : canal commandement. Le radioman doit avoir **posé sa radio sur la
+    fréquence COMMANDEMENT** pour l'entendre (et pour transmettre aux SL) ;
+  - toute personne à **10 mètres** d'une radio posée entend ce qui passe sur sa
+    fréquence (`cfg.Radio.HearRadiusMeters`).
+
+### Création de personnage refaite (esprit Vietnam)
+Fiche d'enrôlement façon **dossier militaire de 1968** : typographie machine à
+écrire (Courier), en-tête MACV Saigon / Front de Libération, numéro de dossier,
+coins de formulaire, lignes pointillées et **tampon incliné** CONFIDENTIEL / ENRÔLÉ.
+Boutons SIGNER L'ENRÔLEMENT / ENREGISTRER LE DOSSIER en DA HLL.
+
+---
 
 ## v16 — Refonte UI complète façon Hell Let Loose
 
