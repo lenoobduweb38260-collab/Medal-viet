@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "media": {
+    "main_menu_background": {
+      "type": "video",
+      "url": "https://www.dropbox.com/scl/fi/TON_ID/menu_background.webm?rlkey=TON_RLKEY&dl=0",
+      "loop": true,
+      "muted": true,
+      "opacity": 0.62,
+      "objectFit": "cover"
+    },
+    "faction_background": {
+      "type": "video",
+      "url": "https://www.dropbox.com/scl/fi/TON_ID/faction_background.webm?rlkey=TON_RLKEY&dl=0",
+      "loop": true,
+      "muted": true,
+      "opacity": 0.55,
+      "objectFit": "cover"
+    },
+    "main_to_faction": {
+      "type": "video",
+      "url": "https://www.dropbox.com/scl/fi/TON_ID/main_to_faction.mp4?rlkey=TON_RLKEY&dl=0",
+      "duration": 5.5,
+      "skippable": true,
+      "muted": false,
+      "volume": 0.55
+    },
+    "faction_to_character": {
+      "type": "video",
+      "url": "https://www.dropbox.com/scl/fi/TON_ID/faction_to_character.mp4?rlkey=TON_RLKEY&dl=0",
+      "duration": 4.0,
+      "skippable": true,
+      "muted": false,
+      "volume": 0.5
+    },
+    "character_to_roles": {
+      "type": "video",
+      "url": "https://www.dropbox.com/scl/fi/TON_ID/briefing_roles.mp4?rlkey=TON_RLKEY&dl=0",
+      "duration": 4.8,
+      "skippable": true,
+      "muted": false,
+      "volume": 0.5
+    },
+    "spawn_cinematic": {
+      "type": "video",
+      "url": "https://www.dropbox.com/scl/fi/TON_ID/spawn_insertion.mp4?rlkey=TON_RLKEY&dl=0",
+      "duration": 6.5,
+      "skippable": true,
+      "muted": false,
+      "volume": 0.65
+    },
+    "main_menu_ambient": {
+      "type": "audio",
+      "url": "https://www.dropbox.com/scl/fi/TON_ID/menu_ambient.mp3?rlkey=TON_RLKEY&dl=0",
+      "volume": 0.25,
+      "loop": true
+    }
+  }
+}
