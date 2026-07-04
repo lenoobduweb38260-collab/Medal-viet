@@ -1,4 +1,35 @@
-# Medal Barracks Menu Vietnam — v19 Créateur 2 étapes, vidéo persistante & sabotage
+# Medal Barracks Menu Vietnam — v20 Anti-AFK, musiques Dropbox & Medal Frontline
+
+## v20 — Anti-AFK XP, gestionnaire de musiques, addon Medal Frontline
+
+### Anti-AFK sur l'XP
+Un joueur inactif depuis plus de **3 minutes** (`cfg.XP.AFKBlock.Seconds`) ne
+gagne **plus aucune XP** (générale ET de rôle) jusqu'à ce qu'il reprenne son
+activité (mouvement, caméra, touche, chat). Le suivi d'activité est exposé en
+global (`MedalAFK_IsAFK`) et réutilisé par Medal Frontline.
+
+### Gestionnaire de musiques STAFF (dossier Dropbox auto-synchronisé)
+Commande **medal_music** (staff) : menu HLL listant les musiques d'un dossier
+Dropbox, **mise à jour automatique** (`cfg.Music.RefreshInterval`).
+- **Mode API Dropbox** (recommandé) : renseigne `cfg.Music.Dropbox.AccessToken`
+  + `FolderPath` — tout fichier audio ajouté au dossier apparaît tout seul
+  (listing `files/list_folder` + liens temporaires `get_temporary_link`).
+- **Mode manifest** : `cfg.Music.ManifestURL` vers un `musics.json` Dropbox.
+- Lecture pour TOUT le serveur (sound.PlayURL), STOP, volume de diffusion,
+  toast "♪ en lecture", les joueurs qui arrivent en cours reçoivent la musique.
+
+### NOUVEL ADDON SÉPARÉ : Medal Frontline (dossier `medal_frontline/`)
+Capture de zones façon Hell Let Loose — voir `medal_frontline/README_FR.md`.
+- 3 modes choisis depuis le **panneau staff** (`medal_frontline_staff`) :
+  **WARFARE** (5 secteurs, ligne de front), **OFFENSIVE** (attaque séquentielle
+  avec temps additionnel par capture), **ESCARMOUCHE** (point unique à tickets).
+- **Barre de secteurs HLL** en haut de l'écran : segments ruban inclinés,
+  cadenas sur les secteurs verrouillés, progression de capture, timer.
+- **Compteur de joueurs ACTIFS des deux camps** sous la barre : les joueurs
+  **AFK depuis plus de 5 minutes ne sont pas comptés**.
+- Secteurs définis en jeu (« DÉFINIR ICI ») et sauvegardés par map.
+
+---
 
 ## v19 — Créateur de personnage 2 étapes, playlists Dropbox, sabotage des caisses
 

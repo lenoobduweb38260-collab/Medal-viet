@@ -410,9 +410,12 @@ local function startPassiveXPTimer()
     timer.Create("MedalBarracks_PassiveGeneralXP", interval, 0, function()
         if not xpEnabled() or xpGeneralCfg().Enabled == false then return end
         local amount = tonumber(xpGeneralCfg().Amount) or 25
+        local afkCfg = (cfg.XP or {}).AFKBlock or {}
         for _, ply in ipairs(player.GetAll()) do
             if IsValid(ply) then
-                if xpGeneralCfg().RequireRoleSelected ~= true or MedalBarracks.Selected[steamKey(ply)] then
+                -- Anti-AFK : plus aucune XP après AFKBlock.Seconds d'inactivité.
+                local afk = afkCfg.Enabled ~= false and MedalAFK_IsAFK and MedalAFK_IsAFK(ply, tonumber(afkCfg.Seconds) or 180)
+                if not afk and (xpGeneralCfg().RequireRoleSelected ~= true or MedalBarracks.Selected[steamKey(ply)]) then
                     MedalBarracks.AddGeneralXP(ply, amount, "service")
                 end
             end
@@ -1216,6 +1219,14 @@ hook.Add("PlayerLoadout", "MedalBarracks_NoDefaultLoadoutInMenu", function(ply)
 end)
 
 hook.Add("PlayerDeath", "MedalBarracks_RoleKillXP", function(victim, inflictor, attacker)
+    -- Anti-AFK : un joueur inactif ne gagne pas d'XP de rôle non plus.
+    do
+        local afkCfg = (cfg.XP or {}).AFKBlock or {}
+        if afkCfg.Enabled ~= false and IsValid(attacker) and attacker:IsPlayer()
+            and MedalAFK_IsAFK and MedalAFK_IsAFK(attacker, tonumber(afkCfg.Seconds) or 180) then
+            return
+        end
+    end
     if not xpEnabled() or xpRoleCfg().Enabled == false then return end
     if not IsValid(attacker) or not attacker:IsPlayer() then return end
     if IsValid(victim) and victim == attacker then return end

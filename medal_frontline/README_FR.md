@@ -1,0 +1,35 @@
+# Medal Frontline — Capture de zones façon Hell Let Loose
+
+Addon **séparé** pour Garry's Mod (compatible avec `medal_barracks_menu_vietnam` :
+les factions sont lues sur `MedalBarracks_ArmyChoice`).
+
+## Installation
+Copie le dossier `medal_frontline/` dans `garrysmod/addons/`.
+
+## Modes (choisis depuis le panneau staff)
+- **WARFARE** : 5 secteurs en ligne, chaque camp démarre avec 2 secteurs,
+  seule la ligne de front est capturable. Victoire : tous les secteurs, ou
+  majorité à la fin du temps.
+- **OFFENSIVE** : un camp attaquant (configurable dans le panneau) capture les
+  secteurs dans l'ordre ; chaque capture ajoute du temps. Les défenseurs
+  gagnent s'ils tiennent jusqu'au bout.
+- **ESCARMOUCHE** : un unique point central ; le tenir rapporte des tickets,
+  premier camp au quota gagne.
+
+## Panneau staff
+Commande : `medal_frontline_staff` (admin).
+- Choix du mode, du camp attaquant, LANCER / ARRÊTER / RÉINITIALISER.
+- **Définition des secteurs en jeu** : place-toi au centre du secteur et clique
+  « DÉFINIR ICI » — sauvegarde automatique par map dans `data/medal_frontline/`.
+- Rappel des joueurs actifs par camp.
+
+## HUD
+- Barre de secteurs HLL en haut : segments ruban, cadenas (verrouillé),
+  progression de capture, liseré pulsant si contesté, timer.
+- **Compteur des joueurs ACTIFS des deux camps** : les joueurs **AFK depuis
+  plus de 5 minutes** (`cfg.ActiveAFKSeconds`) **ne sont pas comptés**.
+- Indicateur « CAPTURE EN COURS » quand tu es dans un secteur actif.
+
+## Config
+`lua/medal_frontline/sh_config.lua` : factions, couleurs, vitesses de capture,
+rayon des secteurs, durées par mode, tickets d'escarmouche, HUD.

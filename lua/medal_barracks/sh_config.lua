@@ -100,6 +100,44 @@ cfg.XP = {
     },
 
     NotifyLevelUp = true,
+
+    -- Anti-AFK : un joueur inactif depuis plus de AFKBlock.Seconds ne gagne
+    -- PLUS AUCUNE XP (générale et de rôle) jusqu'à ce qu'il rebouge.
+    AFKBlock = {
+        Enabled = true,
+        Seconds = 180, -- 3 minutes
+    },
+}
+
+-- =========================
+-- Gestionnaire de musiques STAFF (commande medal_music).
+-- Les musiques viennent d'un DOSSIER DROPBOX et la liste se met à jour
+-- automatiquement toutes les RefreshInterval secondes. Deux modes :
+--   1) Dropbox API (recommandé, vrai dossier auto-synchronisé) :
+--      crée une app sur https://www.dropbox.com/developers (scoped access,
+--      permissions files.metadata.read + files.content.read), génère un
+--      access token et renseigne AccessToken + FolderPath ("/musiques").
+--      Tout fichier audio ajouté dans le dossier apparaît tout seul.
+--   2) Manifest JSON : héberge un musics.json sur Dropbox et colle son lien
+--      partagé dans ManifestURL. Format :
+--      {"musics": [{"name": "Fortunate Son", "url": "https://www.dropbox.com/....mp3?dl=0"}]}
+-- =========================
+cfg.Music = {
+    Enabled = true,
+    Command = "medal_music",
+    MinAccess = "admin",          -- admin ou superadmin
+    DefaultVolume = 0.5,
+    RefreshInterval = 180,        -- re-liste le dossier automatiquement (secondes)
+
+    Dropbox = {
+        AccessToken = "",         -- token Dropbox API (mode dossier auto)
+        FolderPath = "/musiques", -- chemin du dossier dans ton Dropbox
+    },
+
+    ManifestURL = "",             -- alternative sans API : lien vers musics.json
+
+    -- Extensions audio/vidéo acceptées lors du listing du dossier.
+    Extensions = {mp3 = true, ogg = true, wav = true, webm = true, mp4 = true},
 }
 
 -- Niveaux par rôle : les chiffres romains dans la liste des rôles affichent CE niveau-là.
