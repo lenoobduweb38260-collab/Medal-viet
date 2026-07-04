@@ -345,6 +345,14 @@ cfg.Supply = {
     EmplacementCost = 25,        -- ravitaillement consommé pour POSER un emplacement
     UseRadiusMeters = 15,        -- distance max entre le chantier et les caisses
     Icon = "medal/loadouts/ammo.png", -- logo affiché au-dessus du weapon selector
+
+    -- Sabotage : une faction peut DÉMONTER les caisses ennemies en restant
+    -- appuyée sur E dessus (ex : les Vietcong démontent le ravitaillement US).
+    Dismantle = {
+        Enabled = true,
+        Time = 4,        -- secondes de maintien de E pour démonter la caisse
+        Cooldown = 30,   -- cooldown (configurable) avant de pouvoir démonter une autre caisse
+    },
 }
 
 -- =========================
@@ -748,14 +756,21 @@ cfg.CharacterCreation = {
     MinAge = 16,
     MaxAge = 80,
 
+    -- Taille du personnage (cm) affichée sur la fiche (slider de l'étape 1).
+    MinSize = 150,
+    MaxSize = 200,
+    DefaultSize = 175,
+
     AllowEditAfterCreation = true,
     AllowNameEditAfterCreation = false,
-    AllowModelChoice = false,
+    AllowModelChoice = true, -- l'étape 1 du créateur propose les modèles en vignettes
 
     Fields = {
         age = true,
         nationality = true,
         description = true,
+        size = true,
+        gender = true,
     },
 }
 
@@ -853,8 +868,18 @@ cfg.RemoteMedia = {
 
     -- Vidéo de fond du menu principal configurée directement.
     -- Tu peux coller ici un lien Dropbox partagé en dl=0, l'addon le convertit tout seul.
+    --
+    -- PLAYLIST : mets PLUSIEURS liens Dropbox dans Playlist pour une boucle de
+    -- musiques aléatoires — à la fin de chaque vidéo, une autre est tirée au sort.
+    -- Si Playlist est vide, c'est URL qui est utilisée en boucle simple.
+    -- La vidéo est PERSISTANTE : elle continue sans redémarrer quand tu changes
+    -- de page de menu, tant que le lien configuré est le même.
     MainMenuDropboxVideo = {
         Enabled = true,
+        Playlist = {
+            -- "https://www.dropbox.com/scl/fi/xxxx/musique1.webm?rlkey=xxxx&dl=0",
+            -- "https://www.dropbox.com/scl/fi/yyyy/musique2.webm?rlkey=yyyy&dl=0",
+        },
         URL = "https://www.dropbox.com/scl/fi/uwkm6t3htbdn28tl00z5b/California-Dreamin.webm?rlkey=z8pqdwouykd8vxlxd1akoq3bu&st=hk2u282r&dl=0",
         Volume = 0.10, -- 0 = muet, 0.10 = discret (valeur demandée), 1 = volume max
         Muted = false,

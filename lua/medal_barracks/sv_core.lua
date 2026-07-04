@@ -157,6 +157,9 @@ function MedalBarracks.InitDB()
     local cc = charCfg()
     local tableName = cc.SQLTable or "medal_barracks_characters"
     sql.Query("CREATE TABLE IF NOT EXISTS " .. tableName .. " (steamid64 TEXT NOT NULL, steamid TEXT, army TEXT NOT NULL, first_name TEXT, last_name TEXT, age INTEGER, nationality TEXT, description TEXT, model TEXT, role TEXT, loadout TEXT, created INTEGER, updated INTEGER, PRIMARY KEY(steamid64, army))")
+    -- Migration douce : colonnes taille (cm) et genre, ignorées si déjà présentes.
+    sql.Query("ALTER TABLE " .. tableName .. " ADD COLUMN size INTEGER")
+    sql.Query("ALTER TABLE " .. tableName .. " ADD COLUMN gender TEXT")
 
     local xpc = xpCfg()
     if xpc.Enabled ~= false and xpc.SaveInSQLite ~= false then
@@ -597,6 +600,8 @@ function MedalBarracks.LoadCharacters(ply)
                     firstName = row.first_name or "",
                     lastName = row.last_name or "",
                     age = tonumber(row.age) or 18,
+                    size = tonumber(row.size) or 175,
+                    gender = row.gender or "male",
                     nationality = row.nationality or "",
                     description = row.description or "",
                     model = row.model or "",
@@ -634,13 +639,15 @@ function MedalBarracks.SaveCharacterRow(ply, armyID, data)
     data.steamid = ply:SteamID()
     data.steamid64 = key
 
-    local q = "INSERT OR REPLACE INTO " .. tableName .. " (steamid64, steamid, army, first_name, last_name, age, nationality, description, model, role, loadout, created, updated) VALUES (" ..
+    local q = "INSERT OR REPLACE INTO " .. tableName .. " (steamid64, steamid, army, first_name, last_name, age, size, gender, nationality, description, model, role, loadout, created, updated) VALUES (" ..
         sqlstr(key) .. ", " ..
         sqlstr(ply:SteamID()) .. ", " ..
         sqlstr(armyID) .. ", " ..
         sqlstr(data.firstName or "") .. ", " ..
         sqlstr(data.lastName or "") .. ", " ..
         tostring(tonumber(data.age) or 18) .. ", " ..
+        tostring(tonumber(data.size) or 175) .. ", " ..
+        sqlstr(data.gender or "male") .. ", " ..
         sqlstr(data.nationality or "") .. ", " ..
         sqlstr(data.description or "") .. ", " ..
         sqlstr(data.model or "") .. ", " ..
@@ -682,6 +689,8 @@ function MedalBarracks.SendCharacters(ply)
                 net.WriteString(data.firstName or "")
                 net.WriteString(data.lastName or "")
                 net.WriteUInt(math.Clamp(tonumber(data.age) or 18, 0, 120), 8)
+                net.WriteUInt(math.Clamp(tonumber(data.size) or 175, 0, 255), 8)
+                net.WriteString(data.gender or "male")
                 net.WriteString(data.nationality or "")
                 net.WriteString(data.description or "")
                 net.WriteString(data.model or defaultCharacterModel(army))
@@ -831,6 +840,8 @@ function MedalBarracks.CreateCharacter(ply, armyID, data)
         firstName = data.firstName,
         lastName = data.lastName,
         age = data.age,
+        size = tonumber(data.size) or 175,
+        gender = data.gender or "male",
         nationality = data.nationality,
         description = data.description,
         model = data.model or defaultCharacterModel(army),
@@ -873,6 +884,8 @@ function MedalBarracks.UpdateCharacter(ply, armyID, data)
     if not ok then return false, msg end
 
     existing.age = data.age
+    existing.size = tonumber(data.size) or existing.size or 175
+    existing.gender = data.gender or existing.gender or "male"
     existing.nationality = data.nationality
     existing.description = data.description
     if cc.AllowModelChoice == true then existing.model = data.model or defaultCharacterModel(army) end
@@ -1071,11 +1084,14 @@ net.Receive("MedalBarracks_RequestCharacters", function(_, ply)
 end)
 
 net.Receive("MedalBarracks_CreateCharacter", function(_, ply)
+    local cc = charCfg()
     local armyID = net.ReadString()
     local data = {
         firstName = net.ReadString(),
         lastName = net.ReadString(),
         age = net.ReadUInt(8),
+        size = math.Clamp(net.ReadUInt(8), tonumber(cc.MinSize) or 150, tonumber(cc.MaxSize) or 200),
+        gender = net.ReadString() == "female" and "female" or "male",
         nationality = net.ReadString(),
         description = net.ReadString(),
         model = net.ReadString(),
@@ -1085,9 +1101,12 @@ net.Receive("MedalBarracks_CreateCharacter", function(_, ply)
 end)
 
 net.Receive("MedalBarracks_UpdateCharacter", function(_, ply)
+    local cc = charCfg()
     local armyID = net.ReadString()
     local data = {
         age = net.ReadUInt(8),
+        size = math.Clamp(net.ReadUInt(8), tonumber(cc.MinSize) or 150, tonumber(cc.MaxSize) or 200),
+        gender = net.ReadString() == "female" and "female" or "male",
         nationality = net.ReadString(),
         description = net.ReadString(),
         model = net.ReadString(),

@@ -1,4 +1,42 @@
-# Medal Barracks Menu Vietnam — v18 Combiné radio, ravitaillement & UI slots
+# Medal Barracks Menu Vietnam — v19 Créateur 2 étapes, vidéo persistante & sabotage
+
+## v19 — Créateur de personnage 2 étapes, playlists Dropbox, sabotage des caisses
+
+### Créateur de personnage en 2 étapes (référence "Character Creator")
+- **ÉTAPE 1 — IDENTITÉ & APPARENCE** : prénom/nom côte à côte, **sliders ÂGE et
+  TAILLE (cm)**, onglets **HOMME / FEMME**, **vignettes de modèles** cliquables
+  et **aperçu du soldat en grand** à droite (mis à jour en direct).
+- **ÉTAPE 2 — DOSSIER ADMINISTRATIF** : en cliquant sur SUIVANT, une nouvelle
+  page s'ouvre en style document militaire 1968 tapé à la machine :
+  récapitulatif (soldat, âge, taille, sexe), n° de dossier, nationalité,
+  antécédents, tampon incliné et bouton SIGNER L'ENRÔLEMENT.
+- Modèles féminins optionnels par faction : `army.characterModelsFemale = {...}`.
+- Taille et genre sont sauvegardés en SQLite (migration automatique des tables
+  existantes) et affichés sur la carte du personnage.
+
+### Vidéo Dropbox persistante entre les pages
+Le fond vidéo utilise désormais un **lecteur global unique** : tant que la
+source configurée ne change pas (même lien, ou écran sans lien dédié qui
+réutilise la vidéo principale), **la vidéo et sa musique continuent sans
+redémarrer** quand on navigue entre menu principal, factions, personnages,
+caserne, options… Quand tous les menus sont fermés, la vidéo se met en pause
+et reprend au même endroit à la prochaine ouverture.
+
+### Playlists Dropbox (musiques aléatoires)
+`cfg.RemoteMedia.MainMenuDropboxVideo.Playlist = { "lien1", "lien2", … }` :
+à la fin de chaque vidéo, une autre est **tirée au sort** (jamais deux fois la
+même à la suite) — boucle infinie variée. Fonctionne aussi par écran via
+`ScreenVideos.<écran>.Playlist`. Si Playlist est vide, `URL` reste utilisée.
+
+### Sabotage : démonter le ravitaillement ennemi
+Un joueur de la faction adverse (ex : Vietcong sur une caisse US) **maintient E
+sur la caisse** pour la démonter : barre rouge de progression au-dessus de la
+caisse, la progression retombe s'il relâche. Une fois démontée, **cooldown
+configurable** avant de pouvoir en démonter une autre :
+`cfg.Supply.Dismantle = {Enabled, Time = 4, Cooldown = 30}`.
+Le propriétaire est prévenu quand sa caisse est démontée.
+
+---
 
 ## v18 — Voix radio, ravitaillement, écrans factions/personnages refaits
 

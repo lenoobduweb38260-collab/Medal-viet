@@ -238,6 +238,9 @@ local function scheduleMenuAmbientStop()
     timer.Simple(0.25, function()
         if IsValid(MedalBarracks.MainFrame) or IsValid(MedalBarracks.CharacterFrame) or IsValid(MedalBarracks.Frame) then return end
         MedalBarracks.StopMenuAmbient()
+        -- Plus aucun menu ouvert : on met la vidéo globale en pause (elle
+        -- reprendra au même endroit à la prochaine ouverture du menu).
+        if MedalBarracks.HideGlobalVideo then MedalBarracks.HideGlobalVideo() end
     end)
 end
 
@@ -281,10 +284,13 @@ local function mediaFromTable(key)
     local directScreen = istable(screenVideos) and screenVideos[key] or nil
     if istable(directScreen) and directScreen.Enabled ~= false then
         local url = directScreen.URL or directScreen.url or directScreen.Link or directScreen.link
-        if isstring(url) and url ~= "" then
+        local plist = directScreen.Playlist or directScreen.URLs or directScreen.playlist
+        if not istable(plist) or #plist == 0 then plist = nil end
+        if (isstring(url) and url ~= "") or plist then
             return {
                 type = directScreen.Type or directScreen.type or "video",
-                url = url,
+                url = (isstring(url) and url ~= "") and url or plist[1],
+                playlist = plist,
                 loop = directScreen.Loop ~= false,
                 muted = directScreen.Muted == true or (tonumber(directScreen.Volume) or 0) <= 0,
                 volume = math.Clamp(tonumber(directScreen.Volume) or 0, 0, 1),
@@ -303,10 +309,13 @@ local function mediaFromTable(key)
     local usage = rm.Usage or {}
     if key == "main_menu_background" or key == usage.MainMenuBackground then
         local direct = rm.MainMenuDropboxVideo
-        if istable(direct) and direct.Enabled ~= false and isstring(direct.URL) and direct.URL ~= "" then
+        local directPlist = istable(direct) and (direct.Playlist or direct.URLs) or nil
+        if not istable(directPlist) or #directPlist == 0 then directPlist = nil end
+        if istable(direct) and direct.Enabled ~= false and ((isstring(direct.URL) and direct.URL ~= "") or directPlist) then
             return {
                 type = "video",
-                url = direct.URL,
+                url = (isstring(direct.URL) and direct.URL ~= "") and direct.URL or directPlist[1],
+                playlist = directPlist,
                 loop = direct.Loop ~= false,
                 muted = direct.Muted == true or (tonumber(direct.Volume) or 0) <= 0,
                 volume = math.Clamp(tonumber(direct.Volume) or 0.35, 0, 1),
@@ -401,11 +410,48 @@ local function buildVideoHTML(media, mode)
         </style></head><body><iframe allow="autoplay; fullscreen" src="]] .. embed .. [["></iframe></body></html>]]
     end
 
+    -- Playlist : plusieurs liens Dropbox -> lecture aléatoire en boucle,
+    -- une nouvelle musique/vidéo est tirée au sort à la fin de chacune.
+    local urls = {}
+    if istable(media.playlist) then
+        for _, u in ipairs(media.playlist) do
+            local nu = normalizeMediaURL(u)
+            if nu ~= "" then table.insert(urls, nu) end
+        end
+    end
+    if #urls == 0 and url ~= "" then urls[1] = url end
+    if #urls == 0 then return "" end
+
+    local videoCSS = [[html,body{margin:0;padding:0;overflow:hidden;background:transparent;width:100%;height:100%;}
+        video{position:fixed;left:0;top:0;width:100%;height:100%;object-fit:]] .. htmlEscape(objectFit) .. [[;object-position:]] .. htmlEscape(objectPosition) .. [[;opacity:]] .. tostring(opacity) .. [[;filter:]] .. htmlEscape(filter) .. [[;pointer-events:none;background:transparent;transform:scale(]] .. tostring(zoom) .. [[);transform-origin:]] .. htmlEscape(objectPosition) .. [[;}]]
+
+    if #urls > 1 then
+        local jsList = {}
+        for _, u in ipairs(urls) do
+            -- Nettoyage pour l'injection JS : une URL valide ne contient ni quote ni espace.
+            table.insert(jsList, "'" .. string.gsub(u, "[%s']", "") .. "'")
+        end
+        return [[<!doctype html><html><head><meta charset="utf-8"><style>]] .. videoCSS .. [[</style></head><body>
+            <video id="v" autoplay playsinline webkit-playsinline preload="auto"></video>
+            <script>
+                var v=document.getElementById('v');
+                var list=[]] .. table.concat(jsList, ",") .. [[];
+                var i=Math.floor(Math.random()*list.length);
+                v.volume=]] .. tostring(volume) .. [[;
+                v.muted=]] .. (muted and "true" or "false") .. [[;
+                function playIdx(){ v.src=list[i]; v.load(); var p=v.play(); if(p && p.catch){ p.catch(function(){ setTimeout(function(){v.muted=true; v.play().catch(function(){});}, 250); }); } }
+                function nextRandom(){ if(list.length>1){ var n; do{ n=Math.floor(Math.random()*list.length); }while(n===i); i=n; } playIdx(); }
+                v.addEventListener('ended', nextRandom);
+                v.addEventListener('error', function(){ setTimeout(nextRandom, 500); });
+                document.addEventListener('click', function(){ v.play().catch(function(){}); });
+                playIdx();
+            </script>
+        </body></html>]]
+    end
+
+    url = urls[1]
     local mime = string.find(string.lower(url), ".webm", 1, true) and "video/webm" or "video/mp4"
-    return [[<!doctype html><html><head><meta charset="utf-8"><style>
-        html,body{margin:0;padding:0;overflow:hidden;background:transparent;width:100%;height:100%;}
-        video{position:fixed;left:0;top:0;width:100%;height:100%;object-fit:]] .. htmlEscape(objectFit) .. [[;object-position:]] .. htmlEscape(objectPosition) .. [[;opacity:]] .. tostring(opacity) .. [[;filter:]] .. htmlEscape(filter) .. [[;pointer-events:none;background:transparent;transform:scale(]] .. tostring(zoom) .. [[);transform-origin:]] .. htmlEscape(objectPosition) .. [[;}
-    </style></head><body>
+    return [[<!doctype html><html><head><meta charset="utf-8"><style>]] .. videoCSS .. [[</style></head><body>
         <video id="v" autoplay playsinline webkit-playsinline ]] .. (loop and "loop " or "") .. (muted and "muted " or "") .. [[preload="auto">
             <source src="]] .. htmlEscape(url) .. [[" type="]] .. mime .. [[">
         </video>
@@ -421,6 +467,49 @@ local function buildVideoHTML(media, mode)
     </body></html>]]
 end
 
+-- =========================
+-- Vidéo de fond GLOBALE et persistante : tant que la source configurée ne
+-- change pas, la vidéo (et sa musique) CONTINUE quand on change de page.
+-- =========================
+local function mediaKeyOf(media)
+    if istable(media.playlist) then
+        local t = {}
+        for _, u in ipairs(media.playlist) do table.insert(t, normalizeMediaURL(u)) end
+        if #t > 0 then return table.concat(t, "|") end
+    end
+    return mediaURL(media)
+end
+
+function MedalBarracks.EnsureGlobalVideo(media)
+    local key = mediaKeyOf(media)
+    if key == "" then return nil end
+
+    if IsValid(MedalBarracks.GlobalVideo) and MedalBarracks.GlobalVideoKey == key then
+        -- Même source : on réutilise le lecteur, la musique reprend où elle en était.
+        MedalBarracks.GlobalVideo:SetVisible(true)
+        MedalBarracks.GlobalVideo:RunJavascript("if (window.v) { v.play().catch(function(){}); }")
+        return MedalBarracks.GlobalVideo
+    end
+
+    if IsValid(MedalBarracks.GlobalVideo) then MedalBarracks.GlobalVideo:Remove() end
+    local html = vgui.Create("DHTML")
+    html:SetPos(0, 0)
+    html:SetSize(ScrW(), ScrH())
+    html:SetMouseInputEnabled(false)
+    html:SetKeyboardInputEnabled(false)
+    html:SetZPos(-32768)
+    html:SetHTML(buildVideoHTML(media, "background"))
+    MedalBarracks.GlobalVideo = html
+    MedalBarracks.GlobalVideoKey = key
+    return html
+end
+
+function MedalBarracks.HideGlobalVideo()
+    if not IsValid(MedalBarracks.GlobalVideo) then return end
+    MedalBarracks.GlobalVideo:RunJavascript("if (window.v) { v.pause(); }")
+    MedalBarracks.GlobalVideo:SetVisible(false)
+end
+
 function MedalBarracks.AttachBackgroundVideo(parent, usageKey)
     local rm = remoteCfg()
     if rm.Enabled == false or not IsValid(parent) then return nil end
@@ -429,14 +518,10 @@ function MedalBarracks.AttachBackgroundVideo(parent, usageKey)
     local url = mediaURL(media)
     if url == "" or not isSecureURL(url) then return nil end
 
-    -- Vidéo principale : toujours derrière toute l'UI.
-    local html = vgui.Create("DHTML", parent)
-    html:SetPos(0, 0)
-    html:SetSize(parent:GetWide(), parent:GetTall())
-    html:SetMouseInputEnabled(false)
-    html:SetKeyboardInputEnabled(false)
-    html:SetZPos(-10000)
-    html:SetHTML(buildVideoHTML(media, "background"))
+    -- Vidéo principale : lecteur GLOBAL persistant, derrière toute l'UI.
+    -- Si la source est identique à la page précédente, elle continue sans redémarrer.
+    local html = MedalBarracks.EnsureGlobalVideo(media)
+    if not html then return nil end
 
     -- Vidéo optionnelle uniquement dans la zone gauche, utilisable pour cropper une autre source.
     local leftVideo
@@ -561,7 +646,7 @@ function MedalBarracks.AttachBackgroundVideo(parent, usageKey)
     parent._remoteLeftVideoPanel = leftVideo
     parent._remoteVideoOverlay = overlay
     parent.OnSizeChanged = function(_, w, h)
-        if IsValid(html) then html:SetSize(w, h) end
+        if IsValid(html) and html == MedalBarracks.GlobalVideo then html:SetSize(ScrW(), ScrH()) end
         if IsValid(leftVideo) then
             local zone = cfg.MainMenuLeftZone or {}
             local leftW = S(tonumber(zone.Width) or tonumber((cfg.MainMenuOverlay or {}).LeftWidth) or 620)
@@ -575,7 +660,10 @@ end
 
 function MedalBarracks.ClearBackgroundVideo(parent)
     if not IsValid(parent) then return end
-    if IsValid(parent._remoteVideoPanel) then parent._remoteVideoPanel:Remove() end
+    -- Ne supprime JAMAIS le lecteur global : la vidéo continue entre les pages.
+    if IsValid(parent._remoteVideoPanel) and parent._remoteVideoPanel ~= MedalBarracks.GlobalVideo then
+        parent._remoteVideoPanel:Remove()
+    end
     if IsValid(parent._remoteLeftVideoPanel) then parent._remoteLeftVideoPanel:Remove() end
     if IsValid(parent._remoteVideoOverlay) then parent._remoteVideoOverlay:Remove() end
     parent._remoteVideoPanel = nil
@@ -1208,16 +1296,35 @@ local function drawTitleLeft(menuCfg)
 end
 
 function MedalBarracks.OpenCharacterEditor(armyID, editing)
-    -- Fiche d'enrôlement façon dossier militaire Vietnam 1968, en PLEIN ÉCRAN :
-    -- un voile sombre opaque couvre la vidéo Dropbox pour garder le formulaire lisible.
+    -- Créateur de personnage en 2 étapes, façon "Character Creator" :
+    --   ÉTAPE 1 : identité (nom, âge, taille, genre) + choix du modèle en
+    --             vignettes, avec aperçu du personnage en grand à droite.
+    --   ÉTAPE 2 : DOSSIER ADMINISTRATIF — document militaire 1968 tapé à la
+    --             machine (nationalité, antécédents, tampon, signature).
     local army = MedalBarracks.GetArmy(armyID)
     if not army then return end
     local existing = characterFor(armyID)
     local isUS = armyID == "americans"
+    local cc = cfg.CharacterCreation or {}
     local slotsCfg = cfg.CharacterSlots or {}
     local style = (slotsCfg.Styles or {})[armyID] or {}
     local accent = style.accent or army.accent or C("Accent")
     local panelCol = style.panel or Color(12, 14, 11, 250)
+
+    -- Données du personnage en cours d'édition.
+    local data = {
+        gender = existing and existing.gender or "male",
+        model = existing and existing.model or defaultCharModel(army),
+        age = existing and tonumber(existing.age) or 22,
+        size = existing and tonumber(existing.size) or tonumber(cc.DefaultSize) or 175,
+    }
+
+    local function modelsFor(gender)
+        if gender == "female" and istable(army.characterModelsFemale) and #army.characterModelsFemale > 0 then
+            return army.characterModelsFemale
+        end
+        return istable(army.characterModels) and army.characterModels or {defaultCharModel(army)}
+    end
 
     local frame = vgui.Create("DFrame")
     frame:SetSize(ScrW(), ScrH())
@@ -1228,28 +1335,29 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
     frame:MakePopup()
     frame:SetAlpha(0)
     frame:AlphaTo(255, 0.14, 0)
+    frame.step = 1
     frame.Paint = function(self, w, h)
-        -- Voile quasi opaque : la vidéo de fond ne gêne plus la lecture.
+        -- Voile quasi opaque au-dessus de la vidéo Dropbox : formulaire lisible.
         draw.RoundedBox(0, 0, 0, w, h, Color(4, 5, 4, 232))
     end
     frame.OnKeyCodePressed = function(self, key)
         if key == KEY_ESCAPE then self:Remove() end
     end
 
-    local fw, fh = S(820), S(760)
+    local fw, fh = S(1240), S(820)
     local form = vgui.Create("DPanel", frame)
     form:SetPos(ScrW() / 2 - fw / 2, ScrH() / 2 - fh / 2)
     form:SetSize(fw, fh)
     form.dossierNo = string.format("%04d-%02d", math.random(0, 9999), math.random(10, 99))
 
     local leftX = S(46)
+    local leftW = S(560)
 
     form.Paint = function(self, w, h)
         draw.RoundedBox(0, 0, 0, w, h, Color(panelCol.r, panelCol.g, panelCol.b, 252))
         draw.RoundedBox(0, 0, 0, S(6), h, Color(accent.r, accent.g, accent.b, 235))
         surface.SetDrawColor(214, 220, 196, 65)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-
         -- Coins de formulaire militaire.
         surface.SetDrawColor(214, 220, 196, 110)
         for _, corner in ipairs({{S(16), S(16)}, {w - S(16), S(16)}, {S(16), h - S(16)}, {w - S(16), h - S(16)}}) do
@@ -1257,19 +1365,215 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
             surface.DrawRect(corner[1], corner[2] - S(8), 1, S(16))
         end
 
-        -- En-tête HLL, différent selon la faction.
-        drawSpacedText(style.header or (isUS and "MEDAL VIETNAM // ARMÉE AMÉRICAINE" or "MEDAL VIETNAM // FRONT DE LIBÉRATION"), "MedalBarracks_HLLTab", leftX, S(28), Color(accent.r, accent.g, accent.b, 180), S(4))
-        drawSpacedText(editing and "DOSSIER PERSONNEL" or "FORMULAIRE D'ENRÔLEMENT", "MedalBarracks_HLLHeader", leftX - S(2), S(48), Color(240, 242, 232, 240), S(5))
-        draw.RoundedBox(0, leftX, S(98), S(56), S(3), Color(accent.r, accent.g, accent.b, 235))
+        drawSpacedText(style.header or (isUS and "MEDAL VIETNAM // ARMÉE AMÉRICAINE" or "MEDAL VIETNAM // FRONT DE LIBÉRATION"), "MedalBarracks_HLLTab", leftX, S(26), Color(accent.r, accent.g, accent.b, 180), S(4))
+        drawSpacedText(editing and "MODIFICATION DU PERSONNAGE" or "CRÉATION DU PERSONNAGE", "MedalBarracks_HLLHeader", leftX - S(2), S(46), Color(240, 242, 232, 240), S(5))
+        local stepLabel = frame.step == 1 and "ÉTAPE 1/2 — IDENTITÉ & APPARENCE" or "ÉTAPE 2/2 — DOSSIER ADMINISTRATIF"
+        drawSpacedText(stepLabel, "MedalBarracks_HLLTab", leftX, S(96), Color(232, 234, 222, 165), S(3))
+        draw.RoundedBox(0, leftX, S(118), S(56), S(3), Color(accent.r, accent.g, accent.b, 235))
         surface.SetDrawColor(214, 220, 196, 30)
-        surface.DrawRect(leftX + S(68), S(99), w - leftX * 2 - S(68), 1)
+        surface.DrawRect(leftX + S(68), S(119), w - leftX * 2 - S(68), 1)
 
-        -- Lignes tapées à la machine : immersion Vietnam 1968.
-        draw.SimpleText(isUS and "MILITARY ASSISTANCE COMMAND VIETNAM — SAIGON, RÉPUBLIQUE DU VIÊT NAM" or "FRONT NATIONAL DE LIBÉRATION — MAQUIS DU DELTA DU MÉKONG", "MedalBarracks_TypeSmall", leftX, S(112), Color(200, 205, 180, 170), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        draw.SimpleText("DOSSIER N° " .. self.dossierNo .. "   •   ANNÉE 1968   •   " .. (editing and "MISE À JOUR DU DOSSIER" or "PREMIER ENRÔLEMENT"), "MedalBarracks_TypeSmall", leftX, S(130), Color(200, 205, 180, 130), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        -- Séparateur vertical avant l'aperçu du personnage.
+        surface.SetDrawColor(214, 220, 196, 26)
+        surface.DrawRect(w - S(600), S(140), 1, h - S(250))
+        drawSpacedText("APERÇU DU SOLDAT", "MedalBarracks_RowSmall", w - S(310), S(146), Color(232, 234, 222, 130), S(3), TEXT_ALIGN_CENTER)
+    end
 
-        -- Tampon incliné façon administration militaire.
-        local ax, ay = self:LocalToScreen(w - S(190), S(64))
+    -- ===== Aperçu du personnage, en grand à droite (comme la référence) =====
+    local preview = vgui.Create("DModelPanel", form)
+    preview:SetPos(fw - S(580), S(168))
+    preview:SetSize(S(540), fh - S(290))
+    preview:SetModel(data.model)
+    preview:SetFOV(38)
+    preview:SetCamPos(Vector(92, 0, 48))
+    preview:SetLookAt(Vector(0, 0, 42))
+    preview:SetMouseInputEnabled(false)
+    preview.LayoutEntity = function(pnl, ent)
+        ent:SetAngles(Angle(0, 18 + math.sin(CurTime() * 0.3) * 6, 0))
+        pnl:RunAnimation()
+    end
+    local function setPreviewModel(mdl)
+        data.model = mdl
+        if IsValid(preview) then preview:SetModel(mdl) end
+    end
+
+    -- ===== Pages =====
+    local pageY = S(150)
+    local pageH = fh - S(270)
+    local page1 = vgui.Create("DPanel", form)
+    page1:SetPos(leftX, pageY)
+    page1:SetSize(leftW, pageH)
+    page1.Paint = function() end
+    local page2 = vgui.Create("DPanel", form)
+    page2:SetPos(leftX, pageY)
+    page2:SetSize(leftW, pageH)
+    page2:SetVisible(false)
+
+    local function setStep(n)
+        frame.step = n
+        page1:SetVisible(n == 1)
+        page2:SetVisible(n == 2)
+    end
+
+    -- Champ texte façon machine à écrire.
+    local function fieldEntry(parent, x, y, w, value, editable, tall)
+        local e = vgui.Create("DTextEntry", parent)
+        e:SetPos(x, y)
+        e:SetSize(w, tall or S(36))
+        e:SetFont("MedalBarracks_Type")
+        e:SetText(value or "")
+        e:SetEditable(editable ~= false)
+        e:SetUpdateOnType(true)
+        if tall then e:SetMultiline(true) end
+        e:SetPaintBackground(false)
+        e.Paint = function(self, pw, ph)
+            draw.RoundedBox(0, 0, 0, pw, ph, Color(19, 22, 16, editable == false and 120 or 215))
+            surface.SetDrawColor(214, 220, 196, self:HasFocus() and 130 or 45)
+            surface.DrawOutlinedRect(0, 0, pw, ph, 1)
+            surface.SetDrawColor(214, 220, 196, 55)
+            for dx = S(8), pw - S(10), S(9) do
+                surface.DrawRect(dx, ph - S(6), S(4), 1)
+            end
+            self:DrawTextEntryText(Color(226, 230, 210), Color(112, 126, 74), Color(226, 230, 210))
+        end
+        return e
+    end
+
+    local function fieldLabel(parent, txt, x, y)
+        local l = vgui.Create("DPanel", parent)
+        l:SetPos(x, y)
+        l:SetSize(S(300), S(18))
+        l.Paint = function()
+            drawSpacedText(txt, "MedalBarracks_RowSmall", 0, S(2), Color(232, 234, 222, 170), S(2))
+        end
+    end
+
+    -- Slider militaire : libellé, valeur, piste et curseur (comme la référence).
+    local function makeSlider(parent, y, label, minV, maxV, default, unit)
+        local sl = vgui.Create("DButton", parent)
+        sl:SetText("")
+        sl:SetPos(0, y)
+        sl:SetSize(leftW, S(40))
+        sl.value = math.Clamp(math.Round(tonumber(default) or minV), minV, maxV)
+        local trackX = S(210)
+        local function setFromCursor()
+            local cx = sl:CursorPos()
+            local t = math.Clamp((cx - trackX) / (leftW - trackX - S(22)), 0, 1)
+            sl.value = math.Round(minV + (maxV - minV) * t)
+        end
+        sl.OnMousePressed = function() sl.dragging = true; setFromCursor() end
+        sl.OnMouseReleased = function() sl.dragging = false end
+        sl.Think = function()
+            if sl.dragging then
+                if input.IsMouseDown(MOUSE_LEFT) then setFromCursor() else sl.dragging = false end
+            end
+        end
+        sl.Paint = function(self, pw, ph)
+            self.hoverAnim = Lerp(FrameTime() * 9, self.hoverAnim or 0, (self:IsHovered() or self.dragging) and 1 or 0)
+            draw.RoundedBox(0, 0, 0, pw, ph, Color(19, 22, 16, 200 + self.hoverAnim * 30))
+            surface.SetDrawColor(214, 220, 196, 40 + self.hoverAnim * 60)
+            surface.DrawOutlinedRect(0, 0, pw, ph, 1)
+            drawSpacedText(label, "MedalBarracks_RowSmall", S(14), ph / 2 - S(7), Color(232, 234, 222, 175), S(2))
+            draw.SimpleText(tostring(self.value) .. " " .. unit, "MedalBarracks_TypeSmall", trackX - S(12), ph / 2, Color(148, 156, 108, 235), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            -- Piste + partie remplie + curseur.
+            local tx0, tx1 = trackX, pw - S(22)
+            local t = (self.value - minV) / math.max(maxV - minV, 1)
+            surface.SetDrawColor(60, 66, 52, 220)
+            surface.DrawRect(tx0, ph / 2 - S(1), tx1 - tx0, S(2))
+            surface.SetDrawColor(accent.r, accent.g, accent.b, 230)
+            surface.DrawRect(tx0, ph / 2 - S(1), (tx1 - tx0) * t, S(2))
+            local kx = tx0 + (tx1 - tx0) * t
+            draw.RoundedBox(S(6), kx - S(6), ph / 2 - S(6), S(12), S(12), Color(232, 234, 222, 235))
+        end
+        return sl
+    end
+
+    -- ===== ÉTAPE 1 : identité =====
+    local halfW = math.floor((leftW - S(12)) / 2)
+    fieldLabel(page1, "PRÉNOM", 0, 0)
+    local firstEntry = fieldEntry(page1, 0, S(20), halfW, existing and existing.firstName or "", not editing)
+    fieldLabel(page1, "NOM", halfW + S(12), 0)
+    local lastEntry = fieldEntry(page1, halfW + S(12), S(20), halfW, existing and existing.lastName or "", not editing)
+
+    local ageSlider = makeSlider(page1, S(70), "ÂGE", tonumber(cc.MinAge) or 16, tonumber(cc.MaxAge) or 80, data.age, "ans")
+    local sizeSlider = makeSlider(page1, S(118), "TAILLE", tonumber(cc.MinSize) or 150, tonumber(cc.MaxSize) or 200, data.size, "cm")
+
+    -- Genre : deux onglets HOMME / FEMME.
+    local thumbs = {}
+    local rebuildThumbs
+    local function genderTab(x, gender, label)
+        local b = vgui.Create("DButton", page1)
+        b:SetText("")
+        b:SetPos(x, S(166))
+        b:SetSize(halfW, S(38))
+        b.Paint = function(self, pw, ph)
+            self.hoverAnim = Lerp(FrameTime() * 9, self.hoverAnim or 0, self:IsHovered() and 1 or 0)
+            local sel = data.gender == gender
+            draw.RoundedBox(0, 0, 0, pw, ph, sel and Color(accent.r, accent.g, accent.b, 60) or Color(19, 22, 16, 200))
+            draw.RoundedBox(0, 0, 0, S(3), ph, sel and Color(accent.r, accent.g, accent.b, 235) or Color(60, 66, 52, 200))
+            surface.SetDrawColor(214, 220, 196, sel and 110 or (35 + self.hoverAnim * 60))
+            surface.DrawOutlinedRect(0, 0, pw, ph, 1)
+            drawSpacedText(label, "MedalBarracks_RowSmall", pw / 2, ph / 2, sel and C("White") or Color(232, 234, 222, 150), S(3), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        b.DoClick = function()
+            if data.gender == gender then return end
+            data.gender = gender
+            local models = modelsFor(gender)
+            setPreviewModel(models[1] or data.model)
+            rebuildThumbs()
+        end
+    end
+    genderTab(0, "male", "HOMME")
+    genderTab(halfW + S(12), "female", "FEMME")
+
+    -- Vignettes de modèles (visages/apparences).
+    fieldLabel(page1, "APPARENCE — CHOISIS TON MODÈLE", 0, S(216))
+    rebuildThumbs = function()
+        for _, t in ipairs(thumbs) do if IsValid(t) then t:Remove() end end
+        thumbs = {}
+        local models = modelsFor(data.gender)
+        local size, tgap, perRow = S(92), S(10), 5
+        for i, mdl in ipairs(models) do
+            local col = (i - 1) % perRow
+            local row = math.floor((i - 1) / perRow)
+            local t = vgui.Create("DModelPanel", page1)
+            t:SetPos(col * (size + tgap), S(240) + row * (size + tgap))
+            t:SetSize(size, size)
+            t:SetModel(mdl)
+            t:SetFOV(24)
+            t:SetCamPos(Vector(26, 0, 64))
+            t:SetLookAt(Vector(0, 0, 62))
+            t.LayoutEntity = function(pnl, ent) ent:SetAngles(Angle(0, 8, 0)) end
+            t.PaintOver = function(self, pw, ph)
+                local sel = data.model == mdl
+                surface.SetDrawColor(sel and accent.r or 214, sel and accent.g or 220, sel and accent.b or 196, sel and 235 or 40)
+                surface.DrawOutlinedRect(0, 0, pw, ph, sel and S(2) or 1)
+            end
+            t.DoClick = function()
+                setPreviewModel(mdl)
+                playButtonSound((cfg.Sounds or {}).UIClick)
+            end
+            table.insert(thumbs, t)
+        end
+    end
+    rebuildThumbs()
+
+    -- ===== ÉTAPE 2 : dossier administratif =====
+    page2.Paint = function(self, w, h)
+        -- Document militaire tapé à la machine, avec le récapitulatif de l'étape 1.
+        draw.SimpleText(isUS and "MILITARY ASSISTANCE COMMAND VIETNAM — SAIGON, RÉPUBLIQUE DU VIÊT NAM" or "FRONT NATIONAL DE LIBÉRATION — MAQUIS DU DELTA DU MÉKONG", "MedalBarracks_TypeSmall", 0, 0, Color(200, 205, 180, 170), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        draw.SimpleText("DOSSIER N° " .. form.dossierNo .. "   •   ANNÉE 1968   •   " .. (editing and "MISE À JOUR DU DOSSIER" or "PREMIER ENRÔLEMENT"), "MedalBarracks_TypeSmall", 0, S(20), Color(200, 205, 180, 130), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        surface.SetDrawColor(214, 220, 196, 40)
+        surface.DrawRect(0, S(44), w, 1)
+
+        local name = string.Trim((firstEntry:GetText() or "") .. " " .. (lastEntry:GetText() or ""))
+        draw.SimpleText("SOLDAT : " .. string.upper(name ~= "" and name or "—"), "MedalBarracks_Type", 0, S(58), Color(226, 230, 210, 230), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        draw.SimpleText("ÂGE : " .. ageSlider.value .. " ANS      TAILLE : " .. sizeSlider.value .. " CM      SEXE : " .. (data.gender == "female" and "F" or "M"), "MedalBarracks_Type", 0, S(84), Color(226, 230, 210, 200), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        surface.SetDrawColor(214, 220, 196, 40)
+        surface.DrawRect(0, S(114), w, 1)
+
+        -- Tampon incliné.
+        local ax, ay = self:LocalToScreen(w - S(120), S(86))
         local mtx = Matrix()
         mtx:Translate(Vector(ax, ay, 0))
         mtx:Rotate(Angle(0, -12, 0))
@@ -1285,110 +1589,80 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
 
         draw.SimpleText(editing and "Nom et prénom verrouillés après création — état civil militaire."
             or "Le commandement décline toute responsabilité au-delà de la ligne de front.",
-            "MedalBarracks_TypeSmall", leftX, h - S(34), Color(200, 205, 180, 120), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            "MedalBarracks_TypeSmall", 0, h - S(16), Color(200, 205, 180, 120), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     end
 
-    -- Libellés et champs façon formulaire tapé à la machine.
-    local function fieldLabel(txt, x, y, w)
-        local l = vgui.Create("DPanel", form)
-        l:SetPos(x, y)
-        l:SetSize(w, S(18))
-        l.Paint = function()
-            drawSpacedText(txt, "MedalBarracks_RowSmall", 0, S(2), Color(232, 234, 222, 170), S(2))
-        end
-        return l
+    fieldLabel(page2, "NATIONALITÉ / ORIGINE", 0, S(132))
+    local natEntry = fieldEntry(page2, 0, S(152), leftW, existing and existing.nationality or (isUS and "Américaine" or "Vietnamienne"), true)
+    fieldLabel(page2, "ANTÉCÉDENTS / DESCRIPTION DU SOLDAT", 0, S(204))
+    local descEntry = fieldEntry(page2, 0, S(224), leftW, existing and existing.description or "", true, S(220))
+
+    -- ===== Boutons bas de formulaire =====
+    local btnY = fh - S(96)
+    local backBtn = vgui.Create("DButton", form)
+    backBtn:SetText("")
+    backBtn:SetPos(leftX, btnY)
+    backBtn:SetSize(S(200), S(48))
+    backBtn.Paint = function(self, w, h)
+        drawHLLButton(self, w, h, frame.step == 1 and "ANNULER" or "PRÉCÉDENT", "", false, Color(120, 120, 120), false)
+    end
+    backBtn.DoClick = function()
+        playButtonSound((cfg.Sounds or {}).UIBack)
+        if frame.step == 1 then frame:Remove() else setStep(1) end
     end
 
-    local function fieldEntry(x, y, w, value, editable, tall)
-        local e = vgui.Create("DTextEntry", form)
-        e:SetPos(x, y)
-        e:SetSize(w, tall or S(36))
-        e:SetFont("MedalBarracks_Type")
-        e:SetText(value or "")
-        e:SetEditable(editable ~= false)
-        e:SetUpdateOnType(true)
-        if tall then e:SetMultiline(true) end
-        e:SetPaintBackground(false)
-        e.Paint = function(self, pw, ph)
-            draw.RoundedBox(0, 0, 0, pw, ph, Color(19, 22, 16, editable == false and 120 or 215))
-            surface.SetDrawColor(214, 220, 196, self:HasFocus() and 130 or 45)
-            surface.DrawOutlinedRect(0, 0, pw, ph, 1)
-            -- Ligne pointillée de formulaire sous le texte.
-            surface.SetDrawColor(214, 220, 196, 55)
-            for dx = S(8), pw - S(10), S(9) do
-                surface.DrawRect(dx, ph - S(6), S(4), 1)
+    local nextBtn = vgui.Create("DButton", form)
+    nextBtn:SetText("")
+    nextBtn:SetPos(fw - leftX - S(360), btnY)
+    nextBtn:SetSize(S(360), S(48))
+    nextBtn.Paint = function(self, w, h)
+        local label = frame.step == 1 and "SUIVANT — DOSSIER ADMINISTRATIF" or (editing and "ENREGISTRER LE DOSSIER" or "SIGNER L'ENRÔLEMENT")
+        drawHLLButton(self, w, h, label, "", false, accent, false)
+    end
+    nextBtn.DoClick = function()
+        playButtonSound((cfg.Sounds or {}).UIClick)
+        if frame.step == 1 then
+            if not editing then
+                local minLen = tonumber(cc.MinNameLength) or 2
+                if #string.Trim(firstEntry:GetText() or "") < minLen or #string.Trim(lastEntry:GetText() or "") < minLen then
+                    notification.AddLegacy("Renseigne un prénom et un nom valides avant de continuer.", NOTIFY_ERROR, 3)
+                    return
+                end
             end
-            self:DrawTextEntryText(Color(226, 230, 210), Color(112, 126, 74), Color(226, 230, 210))
+            setStep(2)
+            return
         end
-        return e
-    end
 
-    local colW = math.floor((fw - leftX * 2 - S(24)) / 2)
-    local rightColX = leftX + colW + S(24)
-    local y0 = S(168)
-
-    fieldLabel("PRÉNOM", leftX, y0, colW)
-    local first = fieldEntry(leftX, y0 + S(22), colW, existing and existing.firstName or "", not editing)
-    fieldLabel("NOM", rightColX, y0, colW)
-    local last = fieldEntry(rightColX, y0 + S(22), colW, existing and existing.lastName or "", not editing)
-
-    local y1 = y0 + S(80)
-    fieldLabel("ÂGE", leftX, y1, colW)
-    local age = fieldEntry(leftX, y1 + S(22), colW, existing and tostring(existing.age or 18) or "18", true)
-    fieldLabel("NATIONALITÉ / ORIGINE", rightColX, y1, colW)
-    local nat = fieldEntry(rightColX, y1 + S(22), colW, existing and existing.nationality or (isUS and "Américaine" or "Vietnamienne"), true)
-
-    local y2 = y1 + S(80)
-    fieldLabel("ANTÉCÉDENTS / DESCRIPTION DU SOLDAT", leftX, y2, fw - leftX * 2)
-    local desc = fieldEntry(leftX, y2 + S(22), fw - leftX * 2, existing and existing.description or "", true, S(160))
-
-    local model = existing and existing.model or defaultCharModel(army)
-    if (cfg.CharacterCreation or {}).AllowModelChoice == true and istable(army.characterModels) then
-        local y3 = y2 + S(200)
-        fieldLabel("MODÈLE", leftX, y3, colW)
-        local combo = vgui.Create("DComboBox", form)
-        combo:SetPos(leftX, y3 + S(22))
-        combo:SetSize(colW, S(32))
-        for _, mdl in ipairs(army.characterModels) do combo:AddChoice(mdl, mdl, mdl == model) end
-        combo.OnSelect = function(_, _, _, data) model = data end
-    end
-
-    local btnY = fh - S(102)
-    local cancel = vgui.Create("DButton", form)
-    cancel:SetText("")
-    cancel:SetPos(leftX, btnY)
-    cancel:SetSize(S(180), S(48))
-    cancel.Paint = function(self, w, h) drawHLLButton(self, w, h, "RETOUR", "", false, Color(120, 120, 120), false) end
-    cancel.DoClick = function() playButtonSound((cfg.Sounds or {}).UIBack); frame:Remove() end
-
-    local save = vgui.Create("DButton", form)
-    save:SetText("")
-    save:SetPos(fw - leftX - S(330), btnY)
-    save:SetSize(S(330), S(48))
-    save.Paint = function(self, w, h) drawHLLButton(self, w, h, editing and "ENREGISTRER LE DOSSIER" or "SIGNER L'ENRÔLEMENT", "", false, accent, false) end
-    save.DoClick = function()
-        local a = math.Clamp(tonumber(age:GetText()) or 18, 0, 120)
+        -- Étape 2 : signature du dossier -> envoi au serveur.
+        local a = math.Clamp(tonumber(ageSlider.value) or 18, 0, 120)
+        local sz = math.Clamp(tonumber(sizeSlider.value) or 175, 0, 255)
         if editing then
             net.Start("MedalBarracks_UpdateCharacter")
                 net.WriteString(armyID)
                 net.WriteUInt(a, 8)
-                net.WriteString(nat:GetText() or "")
-                net.WriteString(desc:GetText() or "")
-                net.WriteString(model or defaultCharModel(army))
+                net.WriteUInt(sz, 8)
+                net.WriteString(data.gender or "male")
+                net.WriteString(natEntry:GetText() or "")
+                net.WriteString(descEntry:GetText() or "")
+                net.WriteString(data.model or defaultCharModel(army))
             net.SendToServer()
         else
             net.Start("MedalBarracks_CreateCharacter")
                 net.WriteString(armyID)
-                net.WriteString(first:GetText() or "")
-                net.WriteString(last:GetText() or "")
+                net.WriteString(firstEntry:GetText() or "")
+                net.WriteString(lastEntry:GetText() or "")
                 net.WriteUInt(a, 8)
-                net.WriteString(nat:GetText() or "")
-                net.WriteString(desc:GetText() or "")
-                net.WriteString(model or defaultCharModel(army))
+                net.WriteUInt(sz, 8)
+                net.WriteString(data.gender or "male")
+                net.WriteString(natEntry:GetText() or "")
+                net.WriteString(descEntry:GetText() or "")
+                net.WriteString(data.model or defaultCharModel(army))
             net.SendToServer()
         end
         frame:Remove()
     end
+
+    setStep(1)
 end
 
 function MedalBarracks.OpenCharacterSelection(armyID, slide)
@@ -1478,7 +1752,7 @@ function MedalBarracks.OpenCharacterSelection(armyID, slide)
 
         if existing then
             draw.SimpleText(string.upper((existing.firstName or "") .. " " .. (existing.lastName or "")), "MedalBarracks_CardTitle", w / 2, S(28), C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-            draw.SimpleText(tostring(existing.age or "?") .. " ans  •  " .. tostring(existing.nationality or ""), "MedalBarracks_Row", w / 2, S(66), Color(232, 234, 222, 170), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+            draw.SimpleText(tostring(existing.age or "?") .. " ans  •  " .. tostring(existing.size or 175) .. " cm  •  " .. tostring(existing.nationality or ""), "MedalBarracks_Row", w / 2, S(66), Color(232, 234, 222, 170), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
         else
             draw.SimpleText("+", "MedalBarracks_CardPlus", w / 2, h / 2 - S(48), Color(240, 242, 232, 215), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             drawSpacedText("CRÉE TON PERSONNAGE", "MedalBarracks_H2", w / 2, h / 2 + S(30), C("White"), S(3), TEXT_ALIGN_CENTER)
@@ -2587,6 +2861,8 @@ net.Receive("MedalBarracks_Characters", function()
                 firstName = net.ReadString(),
                 lastName = net.ReadString(),
                 age = net.ReadUInt(8),
+                size = net.ReadUInt(8),
+                gender = net.ReadString(),
                 nationality = net.ReadString(),
                 description = net.ReadString(),
                 model = net.ReadString(),
