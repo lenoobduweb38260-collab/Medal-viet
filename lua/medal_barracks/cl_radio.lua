@@ -292,6 +292,28 @@ local function openRadioMenu(ent)
         btnY = btnY + S(64)
     end
 
+    -- Bouton combiné : décrocher / raccrocher depuis le menu (équivalent du maintien de E).
+    local handset = vgui.Create("DButton", frame)
+    handset:SetText("")
+    handset:SetPos(S(30), fh - S(132))
+    handset:SetSize(fw - S(60), S(46))
+    handset:SetVisible(false)
+    handset.isAction = true
+    handset.Paint = function(self, w, h)
+        self.hoverAnim = Lerp(FrameTime() * 10, self.hoverAnim or 0, self:IsHovered() and 1 or 0)
+        local active = IsValid(LocalPlayer()) and LocalPlayer():GetNWBool("MedalRadio_Handset", false)
+        draw.RoundedBox(0, 0, 0, w, h, Color(16, 19, 14, 180 + self.hoverAnim * 50))
+        draw.RoundedBox(0, 0, 0, S(4), h, active and COL_KHAKI or COL_OLIVE)
+        surface.SetDrawColor(214, 220, 196, 35 + self.hoverAnim * 80)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        draw.SimpleText(active and "RACCROCHER LE COMBINÉ" or "DÉCROCHER LE COMBINÉ (PARLER À LA RADIO)", "MedalRadio_Row", w / 2, h / 2, active and COL_KHAKI or COL_WHITE, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    handset.DoClick = function()
+        net.Start("MedalRadio_Handset")
+            net.WriteEntity(ent)
+        net.SendToServer()
+    end
+
     local isOwner = IsValid(LocalPlayer()) and ent:GetNWString("MedalRadio_Owner", "") == LocalPlayer():SteamID64()
     if isOwner then
         local pack = vgui.Create("DButton", frame)
@@ -346,6 +368,36 @@ end
 
 net.Receive("MedalRadio_OpenMenu", function()
     openRadioMenu(net.ReadEntity())
+end)
+
+-- =========================
+-- Indicateur HUD du combiné : le radioman est en train d'émettre à la voix.
+-- =========================
+hook.Add("HUDPaint", "MedalRadio_HandsetHUD", function()
+    local ply = LocalPlayer()
+    if not IsValid(ply) or not ply:GetNWBool("MedalRadio_Handset", false) then return end
+    local ent = ply:GetNWEntity("MedalRadio_HandsetEnt")
+    if not IsValid(ent) then return end
+
+    local freqID = ent:GetNWString("MedalRadio_Freq", "radioman")
+    local label = freqID == "sl" and "CANAL COMMANDEMENT" or "RÉSEAU RADIO"
+    local freqMHz = ""
+    for _, f in ipairs(radioCfg().Frequencies or {}) do
+        if tostring(f.id) == freqID then freqMHz = tostring(f.freq or "") end
+    end
+
+    local w, h = S(360), S(58)
+    local x, y = ScrW() / 2 - w / 2, ScrH() - S(190)
+    draw.RoundedBox(0, x, y, w, h, Color(10, 12, 9, 205))
+    draw.RoundedBox(0, x, y, S(4), h, COL_KHAKI)
+    surface.SetDrawColor(214, 220, 196, 60)
+    surface.DrawOutlinedRect(x, y, w, h, 1)
+
+    -- Petit indicateur d'émission qui pulse.
+    local pulse = 150 + math.abs(math.sin(CurTime() * 4)) * 105
+    draw.RoundedBox(0, x + S(18), y + h / 2 - S(6), S(12), S(12), Color(COL_RED.r, COL_RED.g, COL_RED.b, pulse))
+    draw.SimpleText("COMBINÉ DÉCROCHÉ — " .. label .. " " .. freqMHz, "MedalRadio_Row", x + S(44), y + S(11), COL_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    draw.SimpleText("Ta voix passe par la radio • maintiens E sur la radio pour raccrocher", "MedalRadio_Small", x + S(44), y + S(33), Color(232, 234, 222, 140), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 end)
 
 -- =========================

@@ -1476,3 +1476,34 @@ hook.Add("PlayerSay", "MedalBarracks_PresentCommand", function(ply, text)
         return ""
     end
 end)
+
+
+-- =========================
+-- Suppression de personnage par le joueur (depuis l'écran de sélection).
+-- =========================
+util.AddNetworkString("MedalBarracks_DeleteCharacter")
+
+net.Receive("MedalBarracks_DeleteCharacter", function(_, ply)
+    local armyID = net.ReadString()
+    local army = MedalBarracks.GetArmy(armyID)
+    if not army then return end
+
+    local chars = MedalBarracks.GetCharacters(ply)
+    if not chars[armyID] then
+        notify(ply, false, "Aucun personnage à supprimer pour cette faction.")
+        return
+    end
+
+    MedalBarracks.DeleteCharacterRow(ply, armyID)
+    chars[armyID] = nil
+    MedalBarracks.UpdateCharacterNW(ply)
+
+    -- Si c'était le personnage actif, on retire le rôle : retour au parcours menu.
+    if MedalBarracks.GetPlayerCamp(ply) == armyID then
+        ply:SetNWString("MedalBarracks_Role", "")
+        ply:SetNWString("MedalBarracks_Loadout", "")
+    end
+
+    MedalBarracks.SendCharacters(ply)
+    notify(ply, true, "Personnage supprimé. Tu peux en créer un nouveau.")
+end)

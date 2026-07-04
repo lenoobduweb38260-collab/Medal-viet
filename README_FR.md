@@ -1,4 +1,62 @@
-# Medal Barracks Menu Vietnam — v17 Escouades, Radioman & DA camo
+# Medal Barracks Menu Vietnam — v18 Combiné radio, ravitaillement & UI slots
+
+## v18 — Voix radio, ravitaillement, écrans factions/personnages refaits
+
+### Combiné radio : le radioman PARLE dans la radio (voix réelle)
+- **Maintiens E** sur une radio posée pour décrocher le combiné (appui court = menu
+  de fréquence). Un bouton DÉCROCHER existe aussi dans le menu de la radio.
+- Pendant l'appel, la voix est routée par `PlayerCanHearPlayersVoice` :
+  - fréquence RÉSEAU RADIO → tous les radiomen de la faction l'entendent ;
+  - fréquence COMMANDEMENT → commandant, officiers et chefs d'escouade ;
+  - toute personne à 10 m d'une radio posée sur la même fréquence entend l'appel ;
+  - les joueurs proches du parleur l'entendent parler dans le combiné (3D).
+- Raccrochage automatique si on s'éloigne (config `cfg.Radio.Handset`).
+- Indicateur HUD "COMBINÉ DÉCROCHÉ" avec témoin d'émission qui pulse.
+
+### Correctif : formulaire de création lisible
+La fiche d'enrôlement s'ouvre maintenant en PLEIN ÉCRAN avec un voile sombre
+opaque au-dessus de la vidéo Dropbox — le formulaire est parfaitement lisible.
+
+### Écran factions façon HLL (référence "VS.")
+Deux emblèmes monochromes centrés avec **VS.** au milieu, nom espacé et
+effectifs `27 / 50` en kaki sous chaque camp, éclaircissement au survol.
+
+### Sélection de personnage à emplacements (référence "SELECT YOUR CHARACTER")
+- Titre centré + "Nombre d'emplacements", slot jouable avec aperçu du modèle,
+  nom/âge/nationalité, bouton **CONTINUER**, et **MODIFIER / SUPPRIMER**
+  (suppression définitive avec confirmation, gérée côté serveur en SQLite).
+- Emplacements décoratifs verrouillés VIP / STAFF (configurables dans
+  `cfg.CharacterSlots.LockedSlots`).
+- **UI différente par faction** (`cfg.CharacterSlots.Styles`) : panneau bleu-gris
+  "MACV Saigon 1968" côté US, panneau terre brûlée "Front National de Libération"
+  côté Vietcong, emblème en filigrane, devise machine à écrire.
+- Liens bas-gauche MENU PRINCIPAL / DÉCONNEXION comme la référence.
+
+### Weapon selector : le soldat "cherche sur lui"
+La molette déplace la sélection immédiatement, mais l'arme n'arrive en main
+qu'après `cfg.WeaponSelector.SwitchDelay` (0.45 s) — indicateur RECHERCHE…
+dans le bloc ARME ACTUELLE.
+
+### Caisse de ravitaillement (Soutien)
+- SWEP `medal_supply_swep` (donné aux rôles Soutien) : clic droit = fantôme
+  vert/rouge, clic gauche = pose. La caisse contient **50 de ravitaillement**
+  (`cfg.Supply`), props configurable.
+- Après la pose : **logo au-dessus du weapon selector** avec jauge de recharge ;
+  la caisse est insélectionnable (grisée + %) tant que la recharge < 100%.
+
+### Ingénieurs : construction alimentée par le ravitaillement
+- L'**Emplacement Tool** (gred_emp_tool) est intégré à l'addon avec une config
+  Vietnam (`lua/autorun/medal_emplacement_tool_config.lua`) : ingénieurs/sapeurs
+  → MG et mortiers, artilleurs → canons ; construction à la pelle.
+- **Poser un emplacement consomme `cfg.Supply.EmplacementCost` (25) de
+  ravitaillement** pris dans les caisses de Soutien à moins de 15 m du chantier —
+  sinon la pose est refusée. Les ingénieurs ont le tool + la pelle en loadout.
+
+### Rappel spawn
+Le parcours reste inchangé : pas de spawn tant qu'aucun rôle n'est validé
+(`cfg.SpawnGate`), puis spawn/respawn sur le spawn du job DarkRP du rôle.
+
+---
 
 ## v17 — Escouades HLL, Radioman, weapon selector molette, palette camo
 

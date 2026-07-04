@@ -32,11 +32,27 @@ function ENT:Initialize()
 end
 
 if SERVER then
+    -- Appui court sur E : menu de fréquence.
+    -- MAINTIEN de E : décrocher / raccrocher le combiné téléphonique (voix radio).
     function ENT:Use(activator)
         if not IsValid(activator) or not activator:IsPlayer() then return end
-        net.Start("MedalRadio_OpenMenu")
-            net.WriteEntity(self)
-        net.Send(activator)
+        if self.NextUseCheck and self.NextUseCheck > CurTime() then return end
+        self.NextUseCheck = CurTime() + 0.3
+
+        local hc = radioCfg().Handset or {}
+        local holdTime = math.max(tonumber(hc.HoldTime) or 0.65, 0.2)
+        local ent = self
+        timer.Simple(holdTime, function()
+            if not IsValid(ent) or not IsValid(activator) then return end
+            if activator:GetPos():Distance(ent:GetPos()) > 200 then return end
+            if hc.Enabled ~= false and activator:KeyDown(IN_USE) then
+                if MedalBarracks.ToggleRadioHandset then MedalBarracks.ToggleRadioHandset(activator, ent) end
+            else
+                net.Start("MedalRadio_OpenMenu")
+                    net.WriteEntity(ent)
+                net.Send(activator)
+            end
+        end)
     end
 end
 

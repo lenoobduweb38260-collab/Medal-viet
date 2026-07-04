@@ -190,7 +190,8 @@ cfg.WeaponSelector = {
     SlotMaterial = "medal/ui/weapon_selector_slot.png",
 
     -- Style HLL : molette = changement d'arme direct, bandeau ARME ACTUELLE en bas à droite.
-    ScrollSwitch = true,              -- true = invnext/invprev changent d'arme immédiatement
+    ScrollSwitch = true,              -- true = la molette navigue dans les armes
+    SwitchDelay = 0.45,               -- le soldat "cherche sur lui" : délai avant que l'arme choisie arrive en main
     CurrentLabel = "ARME ACTUELLE",   -- équivalent du "CURRENT WEAPON" de HLL
     IconH = 40,                       -- hauteur des silhouettes empilées
     IconGap = 10,
@@ -299,6 +300,81 @@ cfg.Radio = {
 
     -- Rôles considérés comme radioman (id du Role dans cfg.Armies).
     RadiomanRoleIDs = {"radioman"},
+
+    -- Son joué à la réception d'un message radio texte.
+    MsgSound = "npc/combine_soldier/vo/on1.wav",
+
+    -- Combiné téléphonique : MAINTENIR E sur la radio posée pour décrocher.
+    -- Pendant l'appel, la voix du porteur passe par le réseau radio :
+    --   fréquence RÉSEAU RADIO -> tous les radiomen de la faction ;
+    --   fréquence COMMANDEMENT -> commandant, officiers, chefs d'escouade ;
+    --   + toute personne à HearRadiusMeters d'une radio posée sur la même fréquence ;
+    --   + les joueurs proches du parleur (il parle à voix haute dans le combiné).
+    Handset = {
+        Enabled = true,
+        HoldTime = 0.65,             -- durée du maintien de E pour décrocher/raccrocher
+        LocalVoiceRadius = 420,      -- rayon (unités) où on entend le radioman parler dans le combiné
+        RestrictOtherListeners = true, -- true = pendant l'appel, seuls le réseau + les proches l'entendent
+        MaxDistanceFromRadio = 190,  -- raccroche automatiquement au-delà de cette distance
+    },
+}
+
+-- =========================
+-- Caisse de ravitaillement (rôle Soutien).
+-- Le soutien la porte en main (SWEP medal_supply_swep) :
+--   clic droit = aperçu fantôme (vert si valide, rouge sinon),
+--   clic gauche = pose la caisse. Elle contient SupplyAmount de ravitaillement.
+-- Après la pose, la caisse "se recharge" : un logo au-dessus du weapon selector
+-- montre la progression, et la caisse est insélectionnable tant que < 100%.
+-- Les ingénieurs consomment ce ravitaillement pour construire les emplacements
+-- (canons, mitrailleuses…) via l'Emplacement Tool (gred_emp_tool).
+-- =========================
+cfg.Supply = {
+    Enabled = true,
+
+    PropModel = "models/props_junk/wood_crate001a.mdl", -- props configurable de la caisse
+    SupplyAmount = 50,           -- ravitaillement donné par caisse
+    RechargeTime = 60,           -- secondes avant de pouvoir reposer une caisse
+    MaxDeployDistance = 95,
+    MaxCratesPerPlayer = 2,      -- caisses simultanées max posées par un même soutien
+
+    -- Rôles autorisés à porter/poser la caisse (id des Role dans cfg.Armies).
+    SupportRoleIDs = {"support", "soutien", "porte_munitions"},
+
+    -- Intégration Emplacement Tool (ingénieurs / sapeurs / artilleurs) :
+    EmplacementCost = 25,        -- ravitaillement consommé pour POSER un emplacement
+    UseRadiusMeters = 15,        -- distance max entre le chantier et les caisses
+    Icon = "medal/loadouts/ammo.png", -- logo affiché au-dessus du weapon selector
+}
+
+-- =========================
+-- Écran de sélection de personnage à emplacements (façon "SELECT YOUR CHARACTER").
+-- Chaque faction a sa propre ambiance : panneau, accent, en-tête.
+-- =========================
+cfg.CharacterSlots = {
+    Title = "SÉLECTIONNE TON PERSONNAGE",
+    -- Emplacements décoratifs verrouillés affichés à côté du slot jouable,
+    -- comme les "Slot Reserved for VIPs / Staff only" de l'image de référence.
+    LockedSlots = {
+        {label = "EMPLACEMENT VIP", desc = "Réservé aux soutiens du serveur", color = Color(198, 181, 94)},
+        {label = "EMPLACEMENT STAFF", desc = "Réservé au staff", color = Color(165, 48, 40)},
+    },
+    Styles = {
+        americans = {
+            header = "ARMÉE AMÉRICAINE — MACV, SAIGON 1968",
+            motto = "DOSSIER DU PERSONNEL — 25TH INFANTRY DIVISION",
+            panel = Color(13, 16, 19, 225),   -- panneau bleu-gris nuit US
+            accent = Color(196, 202, 168),
+            emblem = "medal/camps/americans.png",
+        },
+        vietcong = {
+            header = "FRONT NATIONAL DE LIBÉRATION — 1968",
+            motto = "REGISTRE DU MAQUIS — DELTA DU MÉKONG",
+            panel = Color(24, 15, 11, 225),   -- panneau terre brûlée VC
+            accent = Color(170, 84, 60),
+            emblem = "medal/camps/vietcong.png",
+        },
+    },
 }
 
 cfg.UI = {
@@ -1075,8 +1151,8 @@ cfg.Armies = {
                         L("veteran", "OPÉRATEUR VÉTÉRAN", 3, {"weapon_smg1", "weapon_pistol", "medal_radio_swep"}, {SMG1 = 90, Pistol = 40}, {"Radio", "Jumelles"}),
                     }),
                     Role("support", "SOUTIEN", "TEAM_MEDAL_US_SUPPORT", "Soutien US", 2, "✚", US_MODEL_2, {
-                        L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1"}, {SMG1 = 220}, {"Munitions", "Pansement"}),
-                        L("porte_munitions", "PORTE-MUNITIONS", 3, {"weapon_smg1"}, {SMG1 = 260}, {"Caisse munitions", "Outils"}),
+                        L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1", "medal_supply_swep"}, {SMG1 = 220}, {"Caisse ravitaillement", "Pansement"}),
+                        L("porte_munitions", "PORTE-MUNITIONS", 3, {"weapon_smg1", "medal_supply_swep"}, {SMG1 = 260}, {"Caisse ravitaillement", "Outils"}),
                     }),
                     Role("mg", "MITRAILLEUR", "TEAM_MEDAL_US_MG", "Mitrailleur US", 2, "═", US_MODEL_2, {
                         L("standard", "MODÈLE STANDARD", 1, {"weapon_ar2"}, {AR2 = 220}, {"Bipied", "Pansement"}),
@@ -1087,8 +1163,8 @@ cfg.Armies = {
                         L("embuscade", "ÉQUIPAGE D'ARTILLERIE", 3, {"weapon_smg1"}, {SMG1 = 150}, {"Munitions AT", "Outils"}),
                     }),
                     Role("engineer", "INGÉNIEUR", "TEAM_MEDAL_US_ENGINEER", "Ingénieur US", 3, "▣", US_MODEL, {
-                        L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1"}, {SMG1 = 140}, {"Outils", "Pansement"}),
-                        L("pionnier", "PIONNIER", 3, {"weapon_smg1", "weapon_frag"}, {SMG1 = 150}, {"Outils", "Charge explosive"}),
+                        L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1", "gred_emp_tool", "weapon_crowbar"}, {SMG1 = 140}, {"Outils", "Pansement"}),
+                        L("pionnier", "PIONNIER", 3, {"weapon_smg1", "weapon_frag", "gred_emp_tool", "weapon_crowbar"}, {SMG1 = 150}, {"Outils", "Charge explosive"}),
                     }),
                 }
             },
@@ -1183,8 +1259,8 @@ cfg.Armies = {
                         L("veteran", "OPÉRATEUR VÉTÉRAN", 3, {"weapon_smg1", "weapon_pistol", "medal_radio_swep"}, {SMG1 = 90, Pistol = 40}, {"Radio", "Jumelles"}),
                     }),
                     Role("soutien", "SOUTIEN", "TEAM_MEDAL_VC_SUPPORT", "Soutien Vietcong", 2, "✚", VC_MODEL_2, {
-                        L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1"}, {SMG1 = 220}, {"Caisse munitions", "Pansement"}),
-                        L("porte_munitions", "PORTE-MUNITIONS", 3, {"weapon_smg1"}, {SMG1 = 260}, {"Caisse munitions", "Outils"}),
+                        L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1", "medal_supply_swep"}, {SMG1 = 220}, {"Caisse ravitaillement", "Pansement"}),
+                        L("porte_munitions", "PORTE-MUNITIONS", 3, {"weapon_smg1", "medal_supply_swep"}, {SMG1 = 260}, {"Caisse ravitaillement", "Outils"}),
                     }),
                     Role("mitrailleur", "MITRAILLEUR", "TEAM_MEDAL_VC_MG", "Mitrailleur Vietcong", 2, "═", VC_MODEL_2, {
                         L("standard", "MODÈLE STANDARD", 1, {"weapon_ar2"}, {AR2 = 220}, {"Bipied", "Pansement"}),
@@ -1195,8 +1271,8 @@ cfg.Armies = {
                         L("embuscade", "EMBUSCADE", 6, {"weapon_smg1", "weapon_frag"}, {SMG1 = 160}, {"Charge AT", "Piège"}),
                     }),
                     Role("sapeur", "SAPEUR", "TEAM_MEDAL_VC_SAPEUR", "Sapeur Vietcong", 3, "▣", VC_MODEL_SCOUT, {
-                        L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1"}, {SMG1 = 140}, {"Outils", "Pansement"}),
-                        L("saboteur", "SABOTEUR", 3, {"weapon_smg1", "weapon_frag"}, {SMG1 = 150}, {"Charge explosive", "Piège"}),
+                        L("standard", "MODÈLE STANDARD", 1, {"weapon_smg1", "gred_emp_tool", "weapon_crowbar"}, {SMG1 = 140}, {"Outils", "Pansement"}),
+                        L("saboteur", "SABOTEUR", 3, {"weapon_smg1", "weapon_frag", "gred_emp_tool", "weapon_crowbar"}, {SMG1 = 150}, {"Charge explosive", "Piège"}),
                     }),
                 }
             },

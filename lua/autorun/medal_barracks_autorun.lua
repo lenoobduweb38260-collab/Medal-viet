@@ -5,6 +5,7 @@ if SERVER then
     AddCSLuaFile("medal_barracks/cl_ui.lua")
     AddCSLuaFile("medal_barracks/cl_squads.lua")
     AddCSLuaFile("medal_barracks/cl_radio.lua")
+    AddCSLuaFile("medal_barracks/cl_supply.lua")
 
     include("medal_barracks/sh_config.lua")
 
@@ -97,9 +98,11 @@ if SERVER then
     include("medal_barracks/sv_core.lua")
     include("medal_barracks/sv_squads.lua")
     include("medal_barracks/sv_radio.lua")
+    include("medal_barracks/sv_supply.lua")
 else
     include("medal_barracks/sh_config.lua")
     include("medal_barracks/cl_ui.lua")
     include("medal_barracks/cl_squads.lua")
     include("medal_barracks/cl_radio.lua")
+    include("medal_barracks/cl_supply.lua")
 end

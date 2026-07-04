@@ -1208,31 +1208,44 @@ local function drawTitleLeft(menuCfg)
 end
 
 function MedalBarracks.OpenCharacterEditor(armyID, editing)
-    -- Fiche d'enrôlement façon dossier militaire Vietnam 1968 : typographie
-    -- machine à écrire, coins de formulaire, tampon incliné, DA Hell Let Loose.
+    -- Fiche d'enrôlement façon dossier militaire Vietnam 1968, en PLEIN ÉCRAN :
+    -- un voile sombre opaque couvre la vidéo Dropbox pour garder le formulaire lisible.
     local army = MedalBarracks.GetArmy(armyID)
     if not army then return end
     local existing = characterFor(armyID)
     local isUS = armyID == "americans"
-    local accent = army.accent or C("Accent")
+    local slotsCfg = cfg.CharacterSlots or {}
+    local style = (slotsCfg.Styles or {})[armyID] or {}
+    local accent = style.accent or army.accent or C("Accent")
+    local panelCol = style.panel or Color(12, 14, 11, 250)
 
     local frame = vgui.Create("DFrame")
-    local fw, fh = S(820), S(760)
-    frame:SetSize(fw, fh)
-    frame:Center()
+    frame:SetSize(ScrW(), ScrH())
+    frame:SetPos(0, 0)
     frame:SetTitle("")
     frame:ShowCloseButton(false)
     frame:SetDraggable(false)
     frame:MakePopup()
     frame:SetAlpha(0)
     frame:AlphaTo(255, 0.14, 0)
-    frame.dossierNo = string.format("%04d-%02d", math.random(0, 9999), math.random(10, 99))
+    frame.Paint = function(self, w, h)
+        -- Voile quasi opaque : la vidéo de fond ne gêne plus la lecture.
+        draw.RoundedBox(0, 0, 0, w, h, Color(4, 5, 4, 232))
+    end
+    frame.OnKeyCodePressed = function(self, key)
+        if key == KEY_ESCAPE then self:Remove() end
+    end
+
+    local fw, fh = S(820), S(760)
+    local form = vgui.Create("DPanel", frame)
+    form:SetPos(ScrW() / 2 - fw / 2, ScrH() / 2 - fh / 2)
+    form:SetSize(fw, fh)
+    form.dossierNo = string.format("%04d-%02d", math.random(0, 9999), math.random(10, 99))
 
     local leftX = S(46)
 
-    frame.Paint = function(self, w, h)
-        drawBlurPanel(self, 6)
-        draw.RoundedBox(0, 0, 0, w, h, Color(12, 14, 11, 246))
+    form.Paint = function(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, Color(panelCol.r, panelCol.g, panelCol.b, 252))
         draw.RoundedBox(0, 0, 0, S(6), h, Color(accent.r, accent.g, accent.b, 235))
         surface.SetDrawColor(214, 220, 196, 65)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
@@ -1244,14 +1257,14 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
             surface.DrawRect(corner[1], corner[2] - S(8), 1, S(16))
         end
 
-        -- En-tête HLL.
-        drawSpacedText(isUS and "MEDAL VIETNAM // ARMÉE AMÉRICAINE" or "MEDAL VIETNAM // FRONT DE LIBÉRATION", "MedalBarracks_HLLTab", leftX, S(28), Color(232, 234, 222, 120), S(4))
+        -- En-tête HLL, différent selon la faction.
+        drawSpacedText(style.header or (isUS and "MEDAL VIETNAM // ARMÉE AMÉRICAINE" or "MEDAL VIETNAM // FRONT DE LIBÉRATION"), "MedalBarracks_HLLTab", leftX, S(28), Color(accent.r, accent.g, accent.b, 180), S(4))
         drawSpacedText(editing and "DOSSIER PERSONNEL" or "FORMULAIRE D'ENRÔLEMENT", "MedalBarracks_HLLHeader", leftX - S(2), S(48), Color(240, 242, 232, 240), S(5))
         draw.RoundedBox(0, leftX, S(98), S(56), S(3), Color(accent.r, accent.g, accent.b, 235))
         surface.SetDrawColor(214, 220, 196, 30)
         surface.DrawRect(leftX + S(68), S(99), w - leftX * 2 - S(68), 1)
 
-        -- Lignes tapées à la machine : commandement, dossier, année — immersion Vietnam.
+        -- Lignes tapées à la machine : immersion Vietnam 1968.
         draw.SimpleText(isUS and "MILITARY ASSISTANCE COMMAND VIETNAM — SAIGON, RÉPUBLIQUE DU VIÊT NAM" or "FRONT NATIONAL DE LIBÉRATION — MAQUIS DU DELTA DU MÉKONG", "MedalBarracks_TypeSmall", leftX, S(112), Color(200, 205, 180, 170), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
         draw.SimpleText("DOSSIER N° " .. self.dossierNo .. "   •   ANNÉE 1968   •   " .. (editing and "MISE À JOUR DU DOSSIER" or "PREMIER ENRÔLEMENT"), "MedalBarracks_TypeSmall", leftX, S(130), Color(200, 205, 180, 130), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 
@@ -1277,7 +1290,7 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
 
     -- Libellés et champs façon formulaire tapé à la machine.
     local function fieldLabel(txt, x, y, w)
-        local l = vgui.Create("DPanel", frame)
+        local l = vgui.Create("DPanel", form)
         l:SetPos(x, y)
         l:SetSize(w, S(18))
         l.Paint = function()
@@ -1287,7 +1300,7 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
     end
 
     local function fieldEntry(x, y, w, value, editable, tall)
-        local e = vgui.Create("DTextEntry", frame)
+        local e = vgui.Create("DTextEntry", form)
         e:SetPos(x, y)
         e:SetSize(w, tall or S(36))
         e:SetFont("MedalBarracks_Type")
@@ -1297,7 +1310,7 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
         if tall then e:SetMultiline(true) end
         e:SetPaintBackground(false)
         e.Paint = function(self, pw, ph)
-            draw.RoundedBox(0, 0, 0, pw, ph, Color(19, 22, 16, editable == false and 120 or 210))
+            draw.RoundedBox(0, 0, 0, pw, ph, Color(19, 22, 16, editable == false and 120 or 215))
             surface.SetDrawColor(214, 220, 196, self:HasFocus() and 130 or 45)
             surface.DrawOutlinedRect(0, 0, pw, ph, 1)
             -- Ligne pointillée de formulaire sous le texte.
@@ -1333,7 +1346,7 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
     if (cfg.CharacterCreation or {}).AllowModelChoice == true and istable(army.characterModels) then
         local y3 = y2 + S(200)
         fieldLabel("MODÈLE", leftX, y3, colW)
-        local combo = vgui.Create("DComboBox", frame)
+        local combo = vgui.Create("DComboBox", form)
         combo:SetPos(leftX, y3 + S(22))
         combo:SetSize(colW, S(32))
         for _, mdl in ipairs(army.characterModels) do combo:AddChoice(mdl, mdl, mdl == model) end
@@ -1341,14 +1354,14 @@ function MedalBarracks.OpenCharacterEditor(armyID, editing)
     end
 
     local btnY = fh - S(102)
-    local cancel = vgui.Create("DButton", frame)
+    local cancel = vgui.Create("DButton", form)
     cancel:SetText("")
     cancel:SetPos(leftX, btnY)
     cancel:SetSize(S(180), S(48))
     cancel.Paint = function(self, w, h) drawHLLButton(self, w, h, "RETOUR", "", false, Color(120, 120, 120), false) end
     cancel.DoClick = function() playButtonSound((cfg.Sounds or {}).UIBack); frame:Remove() end
 
-    local save = vgui.Create("DButton", frame)
+    local save = vgui.Create("DButton", form)
     save:SetText("")
     save:SetPos(fw - leftX - S(330), btnY)
     save:SetSize(S(330), S(48))
@@ -1386,6 +1399,13 @@ function MedalBarracks.OpenCharacterSelection(armyID, slide)
 
     local army = MedalBarracks.GetArmy(armyID)
     if not army then MedalBarracks.OpenMainMenu("factions", true); return end
+    MedalBarracks.RequestCharacters()
+
+    -- Chaque faction a SA propre ambiance : panneau, accent, en-tête, emblème.
+    local slotsCfg = cfg.CharacterSlots or {}
+    local style = (slotsCfg.Styles or {})[armyID] or {}
+    local accent = style.accent or army.accent or C("Accent")
+    local panelCol = style.panel or Color(13, 16, 19, 225)
 
     local frame = vgui.Create("DFrame")
     MedalBarracks.CharacterFrame = frame
@@ -1397,7 +1417,6 @@ function MedalBarracks.OpenCharacterSelection(armyID, slide)
     frame:MakePopup()
     frame.OnRemove = scheduleMenuAmbientStop
     frame.state = "character"
-    frame:SetAlpha(255)
     if slide then frame:MoveTo(0, 0, (cfg.Animations and cfg.Animations.SlideDuration) or 0.34, 0, -1) end
 
     do
@@ -1406,138 +1425,156 @@ function MedalBarracks.OpenCharacterSelection(armyID, slide)
         if bgKey and MedalBarracks.SetBackgroundVideo then MedalBarracks.SetBackgroundVideo(frame, bgKey) end
     end
 
-    local st = cfg.CharacterMenuStyle or {}
-    local cardX = S(tonumber(st.CardX) or 120)
-    local cardY = S(tonumber(st.CardY) or 210)
-    local cardW = S(tonumber(st.CardW) or 500)
-    local cardH = math.min(S(tonumber(st.CardH) or 680), ScrH() - cardY - S(145))
-    local infoX = S(tonumber(st.InfoX) or 675)
-    local infoY = S(tonumber(st.InfoY) or 230)
-    local infoW = math.min(S(tonumber(st.InfoW) or 900), ScrW() - infoX - S(110))
-    local infoH = S(tonumber(st.InfoH) or 520)
-    local charModelPanel
+    -- 1 emplacement jouable + emplacements verrouillés décoratifs (VIP / staff).
+    local lockedSlots = slotsCfg.LockedSlots or {}
+    local slotCount = 1 + #lockedSlots
+    local cardW, cardH = S(384), S(540)
+    local gap = S(24)
+    local totalW = slotCount * cardW + (slotCount - 1) * gap
+    local startX = ScrW() / 2 - totalW / 2
+    local cardY = S(226)
+    local emblemMat = mat(style.emblem or army.cardImage)
 
+    frame.Paint = function(self, w, h)
+        drawFrameBackground(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 120))
+        for i = 0, 14 do
+            draw.RoundedBox(0, 0, i * S(14), w, S(16), Color(0, 0, 0, math.max(0, 122 - i * 8)))
+            draw.RoundedBox(0, 0, h - (i + 1) * S(15), w, S(17), Color(0, 0, 0, math.max(0, 138 - i * 8)))
+        end
+
+        -- Identité de la faction en haut à gauche.
+        drawSpacedText(style.header or string.upper(army.name or armyID), "MedalBarracks_HLLTab", S(72), S(34), Color(accent.r, accent.g, accent.b, 195), S(4))
+        draw.SimpleText(style.motto or "", "MedalBarracks_TypeSmall", S(72), S(58), Color(200, 205, 180, 145), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+
+        -- Emblème de faction en filigrane, en haut à droite.
+        if emblemMat then
+            surface.SetMaterial(emblemMat)
+            surface.SetDrawColor(255, 255, 255, 32)
+            local es = S(180)
+            surface.DrawTexturedRect(w - es - S(64), S(28), es, es)
+        end
+
+        -- Titre centré, comme "SELECT YOUR CHARACTER".
+        drawSpacedText(slotsCfg.Title or "SÉLECTIONNE TON PERSONNAGE", "MedalBarracks_HLLHeader", w / 2, S(92), Color(240, 242, 232, 240), S(8), TEXT_ALIGN_CENTER)
+        draw.RoundedBox(0, w / 2 - S(28), S(146), S(56), S(3), Color(accent.r, accent.g, accent.b, 235))
+        draw.SimpleText("Nombre d'emplacements : " .. slotCount, "MedalBarracks_Row", w / 2, S(162), Color(232, 234, 222, 175), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+
+        drawHLLFooter(w, h, "RETOUR AU CHOIX DE FACTION")
+    end
+
+    -- ===== Slot #1 : le personnage jouable =====
+    local slotX = startX
+    local card = vgui.Create("DPanel", frame)
+    card:SetPos(slotX, cardY)
+    card:SetSize(cardW, cardH)
+    card.Paint = function(self, w, h)
+        local existing = characterFor(armyID)
+        draw.RoundedBox(0, 0, 0, w, h, panelCol)
+        draw.RoundedBox(0, 0, 0, w, S(3), Color(accent.r, accent.g, accent.b, 225))
+        surface.SetDrawColor(214, 220, 196, existing and 90 or 40)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        drawSpacedText("SLOT #1", "MedalBarracks_RowSmall", w - S(14), S(12), Color(232, 234, 222, 130), S(2), TEXT_ALIGN_RIGHT)
+
+        if existing then
+            draw.SimpleText(string.upper((existing.firstName or "") .. " " .. (existing.lastName or "")), "MedalBarracks_CardTitle", w / 2, S(28), C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+            draw.SimpleText(tostring(existing.age or "?") .. " ans  •  " .. tostring(existing.nationality or ""), "MedalBarracks_Row", w / 2, S(66), Color(232, 234, 222, 170), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+        else
+            draw.SimpleText("+", "MedalBarracks_CardPlus", w / 2, h / 2 - S(48), Color(240, 242, 232, 215), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            drawSpacedText("CRÉE TON PERSONNAGE", "MedalBarracks_H2", w / 2, h / 2 + S(30), C("White"), S(3), TEXT_ALIGN_CENTER)
+            drawWrappedText("Clique sur CONTINUER pour remplir ton formulaire d'enrôlement.", "MedalBarracks_CardBody", w / 2, h / 2 + S(64), w - S(60), Color(232, 234, 222, 160), TEXT_ALIGN_CENTER)
+        end
+    end
+
+    local charModelPanel
     local function refreshModel()
         local existing = characterFor(armyID)
         if IsValid(charModelPanel) then charModelPanel:Remove() end
         if not existing then return end
-        charModelPanel = vgui.Create("DModelPanel", frame)
+        charModelPanel = vgui.Create("DModelPanel", card)
         local cp = cfg.CharacterPreview or {}
-        local topPad = S(tonumber(cp.PanelTop) or 38)
-        local bottomSpace = S(tonumber(cp.PanelBottomSpace) or 190)
-        charModelPanel:SetPos(cardX + S(22), cardY + topPad)
-        charModelPanel:SetSize(cardW - S(44), math.max(S(320), cardH - topPad - bottomSpace))
+        charModelPanel:SetPos(S(18), S(98))
+        charModelPanel:SetSize(cardW - S(36), cardH - S(126))
         charModelPanel:SetModel(existing.model or defaultCharModel(army))
         charModelPanel:SetFOV(tonumber(cp.FOV) or 30)
         charModelPanel:SetCamPos(cp.CamPos or Vector(145, 18, 58))
         charModelPanel:SetLookAt(cp.LookAt or Vector(0, 0, 42))
         charModelPanel:SetMouseInputEnabled(false)
-        charModelPanel:SetZPos(60)
-        charModelPanel.LayoutEntity = function(self, ent)
+        charModelPanel.LayoutEntity = function(pnl, ent)
             ent:SetAngles(Angle(0, (tonumber(cp.EntityYaw) or 24) + math.sin(CurTime() * 0.25) * 4, 0))
-            self:RunAnimation()
+            pnl:RunAnimation()
         end
     end
-
     frame.Refresh = refreshModel
     refreshModel()
 
-    frame.Paint = function(self, w, h)
-        drawFrameBackground(self, w, h)
-        -- Overlay lourd à gauche et léger sur toute la page, pour garder la DA du menu principal.
-        draw.RoundedBox(0, 0, 0, w, h, Color(0,0,0,92))
-        for i = 0, 24 do
-            local t = i / 24
-            draw.RoundedBox(0, i * S(34), 0, S(36), h, Color(0,0,0, math.max(0, 238 * ((1 - t) ^ 1.8))))
-        end
-
-        local accent = army.accent or C("Accent")
-        drawHLLHeader(w, "MEDAL VIETNAM // " .. string.upper(army.cardName or army.menuName or army.name or armyID),
-            tostring(st.Title or "DOSSIER DE DÉPLOIEMENT"),
-            tostring(st.Subtitle or "IDENTITÉ OPÉRATIONNELLE"), accent)
-        drawHLLFooter(w, h, "RETOUR AU CHOIX DE FACTION")
-
-        local existing = characterFor(armyID)
-        -- Carte personnage façon carte d'équipement avant départ.
-        draw.RoundedBox(0, cardX, cardY, cardW, cardH, Color(5,5,7,218))
-        surface.SetDrawColor(existing and Color(235,235,235,185) or Color(235,235,235,78))
-        surface.DrawOutlinedRect(cardX, cardY, cardW, cardH, existing and S(2) or 1)
-        surface.SetDrawColor(255,255,255,28)
-        surface.DrawOutlinedRect(cardX + S(10), cardY + S(10), cardW - S(20), cardH - S(20), 1)
-        draw.RoundedBox(0, cardX, cardY, S(5), cardH, Color(accent.r, accent.g, accent.b, 220))
-        for i = 0, 18 do draw.RoundedBox(0, cardX, cardY + cardH - S(210) + i * S(13), cardW, S(14), Color(0,0,0, math.Clamp(45 + i * 13, 0, 240))) end
-
-        if not existing then
-            draw.SimpleText("+", "MedalBarracks_CardPlus", cardX + cardW / 2, cardY + cardH / 2 - S(55), Color(245,245,245,210), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            draw.SimpleText("NOUVEL OPÉRATEUR", "MedalBarracks_CardTitle", cardX + cardW / 2, cardY + cardH - S(145), C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-            drawWrappedText("Clique sur la carte pour créer ton personnage avant le déploiement.", "MedalBarracks_CardBody", cardX + cardW / 2, cardY + cardH - S(96), cardW - S(70), Color(235,235,235,170), TEXT_ALIGN_CENTER)
-        else
-            local fullname = string.upper((existing.firstName or "") .. " " .. (existing.lastName or ""))
-            draw.SimpleText(fullname, "MedalBarracks_CardTitle", cardX + cardW / 2, cardY + cardH - S(150), C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-            draw.SimpleText("ÂGE " .. tostring(existing.age or "?") .. "  •  " .. tostring(existing.nationality or ""), "MedalBarracks_Row", cardX + cardW / 2, cardY + cardH - S(108), Color(235,235,235,168), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-            draw.SimpleText("PRÊT POUR DÉPLOIEMENT", "MedalBarracks_RowSmall", cardX + cardW / 2, cardY + S(18), Color(accent.r, accent.g, accent.b, 230), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-        end
-
-        -- Panneau de briefing / consignes.
-        draw.RoundedBox(0, infoX, infoY, infoW, infoH, Color(5, 5, 7, 178))
-        surface.SetDrawColor(255,255,255,45)
-        surface.DrawOutlinedRect(infoX, infoY, infoW, infoH, 1)
-        draw.RoundedBox(0, infoX, infoY, S(5), infoH, Color(accent.r, accent.g, accent.b, 220))
-        draw.SimpleText("PRÉPARATION AU FRONT", "MedalBarracks_CardTitle", infoX + S(34), infoY + S(32), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        draw.SimpleText("DOSSIER PERSONNEL", "MedalBarracks_Row", infoX + S(36), infoY + S(82), Color(235,235,235,150), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-
-        if not existing then
-            drawWrappedText("Aucun personnage n'a encore été créé pour ce camp. Tu dois créer une identité avant de pouvoir accéder aux rôles et au spawn.", "MedalBarracks_Row", infoX + S(36), infoY + S(130), infoW - S(80), Color(235,235,235,190), TEXT_ALIGN_LEFT)
-            draw.SimpleText("STATUT : EN ATTENTE DE CRÉATION", "MedalBarracks_H2", infoX + S(36), infoY + infoH - S(92), Color(230, 90, 90, 230), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        else
-            draw.SimpleText("Nom complet", "MedalBarracks_RowSmall", infoX + S(36), infoY + S(130), Color(235,235,235,120), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            draw.SimpleText(string.upper((existing.firstName or "") .. " " .. (existing.lastName or "")), "MedalBarracks_H2", infoX + S(36), infoY + S(154), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            draw.SimpleText("Origine / nationalité", "MedalBarracks_RowSmall", infoX + S(36), infoY + S(208), Color(235,235,235,120), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            draw.SimpleText(tostring(existing.nationality or "Non renseigné"), "MedalBarracks_Row", infoX + S(36), infoY + S(232), Color(235,235,235,200), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            draw.SimpleText("Description", "MedalBarracks_RowSmall", infoX + S(36), infoY + S(288), Color(235,235,235,120), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            drawWrappedText(tostring(existing.description or "Aucune description."), "MedalBarracks_Row", infoX + S(36), infoY + S(316), infoW - S(80), Color(235,235,235,180), TEXT_ALIGN_LEFT)
-            draw.SimpleText("STATUT : JOUER ET MODIFIER DÉBLOQUÉS", "MedalBarracks_H2", infoX + S(36), infoY + infoH - S(92), Color(accent.r, accent.g, accent.b, 230), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            draw.SimpleText("Nom et prénom verrouillés après création.", "MedalBarracks_RowSmall", infoX + S(36), infoY + infoH - S(54), Color(235,235,235,130), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        end
-    end
-
-    local hit = vgui.Create("DButton", frame)
-    hit:SetText("")
-    hit:SetPos(cardX, cardY)
-    hit:SetSize(cardW, cardH)
-    hit.Paint = function() end
-    hit.DoClick = function()
-        if not characterFor(armyID) then MedalBarracks.OpenCharacterEditor(armyID, false) end
-    end
-
-    -- Barre d'action HLL : RETOUR à gauche, actions principales à droite.
-    local bottomY = ScrH() - S(100)
-    local back = createButton(frame, "RETOUR", "", S(72), bottomY, S(230), S(56), nil, function()
-        MedalBarracks.OpenMainMenu("factions", false)
-    end)
-    local edit = createButton(frame, "MODIFIER", "Dossier", ScrW() - S(72) - S(300) - S(232), bottomY, S(210), S(56), nil, function()
-        if characterFor(armyID) then MedalBarracks.OpenCharacterEditor(armyID, true) end
-    end, function() return army.accent or C("Accent") end)
-    local play = createButton(frame, "DÉPLOYER", "Choisir un rôle", ScrW() - S(72) - S(300), bottomY, S(300), S(56), nil, function()
+    -- CONTINUER : déploiement si le personnage existe, sinon formulaire d'enrôlement.
+    local continueBtn = createButton(frame, "CONTINUER", "", slotX, cardY + cardH + S(16), cardW, S(54), nil, function()
         if not characterFor(armyID) then
-            notification.AddLegacy("Crée ton personnage avant de jouer.", NOTIFY_ERROR, 4)
+            MedalBarracks.OpenCharacterEditor(armyID, false)
             return
         end
         local rm = cfg.RemoteMedia or {}
         MedalBarracks.MakeTransition("DÉPLOIEMENT", "Briefing radio en cours", function()
             MedalBarracks.Open(armyID, true)
         end, "war", rm.Usage and rm.Usage.CharacterToRolesCinematic)
-    end, function() return army.accent or C("Accent") end)
+    end, function() return accent end)
 
-    edit.Paint = function(self, w, h)
-        local ok = characterFor(armyID) ~= nil
-        drawHLLButton(self, w, h, "MODIFIER", "Dossier", false, ok and (army.accent or C("Accent")) or Color(80,80,80), false)
-        if not ok then draw.RoundedBox(0, 0, 0, w, h, Color(0,0,0,130)) end
+    -- MODIFIER / SUPPRIMER le personnage du slot.
+    local halfBtnW = math.floor(cardW / 2) - S(6)
+    local editBtn = createButton(frame, "MODIFIER", "", slotX, cardY + cardH + S(82), halfBtnW, S(44), nil, function()
+        if characterFor(armyID) then MedalBarracks.OpenCharacterEditor(armyID, true) end
+    end, function() return characterFor(armyID) and accent or Color(85, 85, 85) end)
+    local deleteBtn = createButton(frame, "SUPPRIMER", "", slotX + halfBtnW + S(12), cardY + cardH + S(82), halfBtnW, S(44), nil, function()
+        if not characterFor(armyID) then return end
+        Derma_Query("Supprimer définitivement ce personnage ? Cette action est irréversible.", "Medal Vietnam", "Supprimer", function()
+            net.Start("MedalBarracks_DeleteCharacter")
+                net.WriteString(armyID)
+            net.SendToServer()
+            timer.Simple(0.3, function()
+                if IsValid(frame) then MedalBarracks.OpenCharacterSelection(armyID, false) end
+            end)
+        end, "Annuler")
+    end, function() return characterFor(armyID) and C("Red", Color(165, 48, 40)) or Color(85, 85, 85) end)
+
+    -- ===== Emplacements verrouillés décoratifs (VIP / staff, comme la référence) =====
+    for i, lock in ipairs(lockedSlots) do
+        local lx = startX + i * (cardW + gap)
+        local lp = vgui.Create("DPanel", frame)
+        lp:SetPos(lx, cardY)
+        lp:SetSize(cardW, cardH)
+        lp.Paint = function(self, w, h)
+            draw.RoundedBox(0, 0, 0, w, h, Color(8, 10, 8, 168))
+            surface.SetDrawColor(214, 220, 196, 26)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            drawSpacedText("SLOT #" .. tostring(i + 1), "MedalBarracks_RowSmall", w - S(14), S(12), Color(232, 234, 222, 110), S(2), TEXT_ALIGN_RIGHT)
+            local col = lock.color or C("Accent")
+            draw.SimpleText("🔒", "MedalBarracks_H1", w / 2, h / 2 - S(48), Color(col.r, col.g, col.b, 205), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            drawSpacedText(tostring(lock.label or "EMPLACEMENT VERROUILLÉ"), "MedalBarracks_H2", w / 2, h / 2, Color(col.r, col.g, col.b, 230), S(2), TEXT_ALIGN_CENTER)
+            draw.SimpleText(tostring(lock.desc or ""), "MedalBarracks_Row", w / 2, h / 2 + S(30), Color(232, 234, 222, 150), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+        end
     end
-    play.Paint = function(self, w, h)
-        local ok = characterFor(armyID) ~= nil
-        drawHLLButton(self, w, h, "DÉPLOYER", "Choisir un rôle", false, ok and (army.accent or C("Accent")) or Color(80,80,80), false)
-        if not ok then draw.RoundedBox(0, 0, 0, w, h, Color(0,0,0,130)) end
+
+    -- ===== Liens bas-gauche façon "Home Screen / Disconnect" =====
+    local function textLink(label, x, onClick)
+        local b = vgui.Create("DButton", frame)
+        b:SetText("")
+        b:SetPos(x, ScrH() - S(64))
+        b:SetSize(S(230), S(38))
+        b.Paint = function(self, w, h)
+            self.hoverAnim = Lerp(FrameTime() * 9, self.hoverAnim or 0, self:IsHovered() and 1 or 0)
+            drawSpacedText(label, "MedalBarracks_H2", 0, S(4), Color(232, 234, 222, 190 + self.hoverAnim * 60), S(2))
+            surface.SetDrawColor(214, 220, 196, 70 + self.hoverAnim * 110)
+            surface.DrawRect(0, h - S(6), w - S(30), 1)
+        end
+        b.DoClick = onClick
+        return b
+    end
+    textLink("MENU PRINCIPAL", S(72), function() MedalBarracks.OpenMainMenu("main", false) end)
+    textLink("DÉCONNEXION", S(330), function() RunConsoleCommand("disconnect") end)
+
+    frame.OnKeyCodePressed = function(self, key)
+        if key == KEY_ESCAPE or key == KEY_BACKSPACE then MedalBarracks.OpenMainMenu("factions", false) end
     end
 end
 
@@ -1921,81 +1958,78 @@ function MedalBarracks.OpenMainMenu(initialState, force)
         page:MoveTo(0, 0, (cfg.Animations and cfg.Animations.SlideDuration) or 0.34, 0, -1)
 
         local armies = MedalBarracks.GetArmies()
-        local fcfg = cfg.FactionPage or {}
-        local halfW = ScrW() / math.max(#armies, 1)
 
         page.Paint = function(self, w, h)
-            -- La vidéo reste derrière. Ce voile façon menu de jeu garde la lecture du texte.
-            draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 86))
+            -- Voile sombre au-dessus de la vidéo, façon écran d'enrôlement HLL.
+            draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 138))
             for i = 0, 16 do
-                draw.RoundedBox(0, 0, i * S(15), w, S(18), Color(0, 0, 0, math.max(0, 120 - i * 7)))
-                draw.RoundedBox(0, 0, h - (i + 1) * S(16), w, S(18), Color(0, 0, 0, math.max(0, 130 - i * 7)))
+                draw.RoundedBox(0, 0, i * S(15), w, S(18), Color(0, 0, 0, math.max(0, 130 - i * 8)))
+                draw.RoundedBox(0, 0, h - (i + 1) * S(16), w, S(18), Color(0, 0, 0, math.max(0, 140 - i * 8)))
             end
+            -- "VS." entre les deux emblèmes, comme sur la référence HLL.
+            drawSpacedText("VS.", "MedalBarracks_Title", w / 2, h * 0.40, Color(215, 218, 205, 225), S(3), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
 
-        -- En-tête et barre d'action dessinés AU-DESSUS des cartes faction plein écran.
         page.PaintOver = function(self, w, h)
             drawHLLHeaderCentered(w, "CHOISISSEZ VOTRE FACTION", nil)
-
             local b = campBalanceCfg()
             local info = "1 personnage maximum par faction"
             if b.Enabled ~= false then
-                info = info .. "  •  maximum " .. tostring(campMaxPlayers()) .. " joueurs par camp  •  tolérance : " .. tostring(tonumber(b.Tolerance) or 2)
+                info = info .. "  •  tolérance d'équilibrage : " .. tostring(tonumber(b.Tolerance) or 2)
             end
-            draw.SimpleText(info, "MedalBarracks_Row", w / 2, S(104), Color(235,235,235,182), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+            draw.SimpleText(info, "MedalBarracks_Row", w / 2, S(104), Color(235, 235, 235, 182), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
             drawHLLFooter(w, h, "RETOUR AU MENU PRINCIPAL")
         end
 
+        -- Deux grandes zones cliquables : emblème monochrome, nom espacé, effectifs "27 / 50".
+        local cardW, cardH = S(560), S(520)
+        local centerY = ScrH() * 0.42
         for i, army in ipairs(armies) do
+            local side = (i == 1) and -1 or 1
+            local cx = ScrW() / 2 + side * S(430)
             local card = vgui.Create("DButton", page)
             card:SetText("")
-            card:SetPos((i - 1) * halfW, 0)
-            card:SetSize(halfW, ScrH())
+            card:SetPos(cx - cardW / 2, centerY - cardH / 2)
+            card:SetSize(cardW, cardH)
             card.cardMat = mat(army.cardImage)
             card.Paint = function(self, w, h)
                 local allowed, reason, count, max = canJoinCampClient(army.id)
                 local blocked = not allowed
                 self.hoverAnim = Lerp(FrameTime() * 8, self.hoverAnim or 0, (self:IsHovered() and not blocked) and 1 or 0)
+                local hov = self.hoverAnim
                 local a = army.accent or C("Accent")
-                local hasChar = characterFor(army.id) ~= nil or LocalPlayer():GetNWBool("MedalBarracks_Char_" .. army.id, false)
 
-                draw.RoundedBox(0, 0, 0, w, h, Color(5, 5, 6, 255))
+                -- Emblème façon insigne monochrome, éclairci au survol.
+                local embSize = S(280)
+                local embY = S(56)
                 if self.cardMat then
-                    drawMatFit(self.cardMat, 0, 0, w, h, fcfg.UseCoverImages == false and "contain" or "cover")
+                    local tint = blocked and 110 or (165 + hov * 75)
+                    surface.SetMaterial(self.cardMat)
+                    surface.SetDrawColor(tint, tint + 4, tint - 8, blocked and 130 or (210 + hov * 45))
+                    local iw, ih = self.cardMat:Width(), self.cardMat:Height()
+                    local dw, dh = embSize, embSize
+                    if iw > 0 and ih > 0 then
+                        local ir = iw / ih
+                        if ir > 1 then dh = embSize / ir else dw = embSize * ir end
+                    end
+                    surface.DrawTexturedRect(w / 2 - dw / 2, embY + (embSize - dh) / 2, dw, dh)
                 end
 
-                -- Vignette militaire : lisibilité en bas, style Rising Storm / Cold War.
-                draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, (tonumber(fcfg.DimAlpha) or 82) + (blocked and 82 or 0)))
-                for step = 0, 18 do
-                    local t = step / 18
-                    draw.RoundedBox(0, 0, h - S(420) + step * S(22), w, S(24), Color(0,0,0, math.Clamp(22 + t * 220, 0, 245)))
-                end
-                for step = 0, 10 do
-                    draw.RoundedBox(0, 0, step * S(20), w, S(22), Color(0,0,0, math.max(0, 105 - step * 10)))
+                -- Nom + effectifs, comme "OCTAVO EJÉRCITO BRITÁNICO — 27 / 50".
+                local nameY = embY + embSize + S(40)
+                drawSpacedText(army.cardName or army.menuName or army.name or army.id, "MedalBarracks_CardTitle", w / 2, nameY, blocked and Color(150, 150, 150, 220) or Color(226, 229, 215, 235), S(4), TEXT_ALIGN_CENTER)
+                if campBalanceCfg().ShowCountsOnCards ~= false then
+                    draw.SimpleText(tostring(count or 0) .. " / " .. tostring(max or 60), "MedalBarracks_H2", w / 2, nameY + S(46), blocked and Color(150, 150, 150, 190) or C("Accent", Color(148, 156, 108)), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
                 end
 
-                if self.hoverAnim > 0.02 and not blocked then
-                    draw.RoundedBox(0, 0, 0, w, h, Color(255,255,255, self.hoverAnim * (tonumber(fcfg.HoverBright) or 34)))
-                end
-
-                surface.SetDrawColor(255,255,255, blocked and 35 or (self:IsHovered() and 210 or 70))
-                surface.DrawOutlinedRect(S(26), S(126), w - S(52), h - S(190), self:IsHovered() and not blocked and S(2) or 1)
-                surface.SetDrawColor(i == 1 and Color(255,255,255,22) or Color(0,0,0,120))
-                surface.DrawLine(0, 0, 0, h)
-
-                local titleY = h - S(205)
-                draw.SimpleText(string.upper(army.cardName or army.menuName or army.name or army.id), "MedalBarracks_CardTitle", w / 2, titleY, blocked and Color(150,150,150,220) or C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-                draw.RoundedBox(0, w/2 - S(146), titleY + S(49), S(96), S(2), Color(a.r, a.g, a.b, blocked and 80 or 220))
-                draw.RoundedBox(0, w/2 + S(50), titleY + S(49), S(96), S(2), Color(a.r, a.g, a.b, blocked and 80 or 220))
-
-                if (campBalanceCfg().ShowCountsOnCards ~= false) then
-                    draw.SimpleText(tostring(count or 0) .. " / " .. tostring(max or 60) .. " JOUEURS", "MedalBarracks_H2", w / 2, titleY + S(68), blocked and Color(170,170,170,170) or Color(a.r,a.g,a.b,235), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-                end
-                draw.SimpleText(hasChar and "PERSONNAGE EXISTANT 1/1" or "EMPLACEMENT DISPONIBLE 0/1", "MedalBarracks_Row", w / 2, titleY + S(108), hasChar and Color(235,235,235,205) or Color(a.r,a.g,a.b,215), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+                local hasChar = characterFor(army.id) ~= nil or LocalPlayer():GetNWBool("MedalBarracks_Char_" .. army.id, false)
+                draw.SimpleText(hasChar and "PERSONNAGE EXISTANT 1/1" or "EMPLACEMENT DISPONIBLE 0/1", "MedalBarracks_RowSmall", w / 2, nameY + S(80), Color(232, 234, 222, 150), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
                 if blocked then
-                    draw.SimpleText(reason or "BLOQUÉ", "MedalBarracks_Row", w / 2, titleY + S(138), Color(230, 90, 90, 230), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-                else
-                    draw.SimpleText("CLIQUER POUR CONTINUER", "MedalBarracks_RowSmall", w / 2, titleY + S(140), Color(235,235,235,150), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+                    draw.SimpleText(reason or "BLOQUÉ", "MedalBarracks_Row", w / 2, nameY + S(106), Color(230, 90, 90, 235), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+                elseif hov > 0.03 then
+                    drawSpacedText("CLIQUER POUR CONTINUER", "MedalBarracks_RowSmall", w / 2, nameY + S(108), Color(232, 234, 222, 170 * hov), S(3), TEXT_ALIGN_CENTER)
+                    surface.SetDrawColor(a.r, a.g, a.b, 170 * hov)
+                    surface.DrawOutlinedRect(S(10), S(10), w - S(20), h - S(20), 1)
                 end
             end
             card.DoClick = function()
@@ -2616,6 +2650,9 @@ end)
 -- =========================
 local weaponSelectorUntil = 0
 local lastActiveWeaponClass = ""
+-- Sélection différée : le soldat "cherche sur lui" avant de sortir l'arme.
+local pendingWep = nil
+local pendingSince = 0
 
 local function hudCfg()
     return cfg.HideDefaultHUD or {}
@@ -2668,30 +2705,50 @@ hook.Add("PlayerBindPress", "MedalBarracks_WeaponSelectorBinds", function(ply, b
     local weps = ply:GetWeapons()
     if #weps <= 0 then return end
 
-    -- Molette : changement d'arme immédiat, comme sur Hell Let Loose.
+    -- Molette : la sélection se déplace tout de suite, mais le soldat "cherche
+    -- sur lui" — l'arme n'arrive en main qu'après SwitchDelay secondes.
     if wc.ScrollSwitch ~= false and (string.find(b, "invnext", 1, true) or string.find(b, "invprev", 1, true)) then
-        local active = ply:GetActiveWeapon()
+        local marked = IsValid(pendingWep) and pendingWep or ply:GetActiveWeapon()
         local idx = 1
-        for i, w in ipairs(weps) do if w == active then idx = i break end end
+        for i, w in ipairs(weps) do if w == marked then idx = i break end end
         local dir = string.find(b, "invnext", 1, true) and 1 or -1
-        local target = weps[((idx - 1 + dir) % #weps) + 1]
-        if IsValid(target) then
-            input.SelectWeapon(target)
-            showWeaponSelector()
+        -- Passe les armes bloquées (ex : caisse de ravitaillement en recharge).
+        for step = 1, #weps do
+            local target = weps[((idx - 1 + dir * step) % #weps) + 1]
+            if IsValid(target) and not (MedalBarracks.WeaponSelectorBlocked and MedalBarracks.WeaponSelectorBlocked(target)) then
+                pendingWep = target
+                pendingSince = CurTime()
+                showWeaponSelector()
+                break
+            end
         end
         return true -- bloque la sélection HL2 par défaut
     end
 
-    -- Touches 1-9 : slot direct dans l'ordre de la pile.
+    -- Touches 1-9 : slot direct dans l'ordre de la pile (même délai de fouille).
     local slotNum = tonumber(string.match(b, "^slot(%d+)$"))
     if slotNum then
         local target = weps[slotNum]
-        if IsValid(target) then
-            input.SelectWeapon(target)
+        if IsValid(target) and not (MedalBarracks.WeaponSelectorBlocked and MedalBarracks.WeaponSelectorBlocked(target)) then
+            pendingWep = target
+            pendingSince = CurTime()
             showWeaponSelector()
         end
         return true
     end
+end)
+
+-- Le délai de "fouille" écoulé, l'arme sélectionnée arrive en main.
+hook.Add("Think", "MedalBarracks_WeaponSelectorPending", function()
+    if pendingWep == nil then return end
+    if not IsValid(pendingWep) then pendingWep = nil; return end
+    local delay = math.max(tonumber(wsCfg().SwitchDelay) or 0.45, 0)
+    if CurTime() - pendingSince < delay then return end
+    local ply = LocalPlayer()
+    if IsValid(ply) and ply:Alive() and pendingWep:GetOwner() == ply then
+        input.SelectWeapon(pendingWep)
+    end
+    pendingWep = nil
 end)
 
 hook.Add("Think", "MedalBarracks_WeaponSelectorActiveCheck", function()
@@ -2717,6 +2774,8 @@ hook.Add("HUDPaint", "MedalBarracks_WeaponSelectorPaint", function()
     if #weps <= 0 then return end
     local active = ply:GetActiveWeapon()
     if not IsValid(active) then return end
+    local marked = IsValid(pendingWep) and pendingWep or active
+    local searching = IsValid(pendingWep) and pendingWep ~= active
 
     local rightX = ScrW() - S(tonumber(wc.RightMargin) or 42)
     local bottomY = ScrH() - S(tonumber(wc.BottomMargin) or 118)
@@ -2734,6 +2793,11 @@ hook.Add("HUDPaint", "MedalBarracks_WeaponSelectorPaint", function()
     surface.DrawRect(sepX, bottomY - S(58), 1, S(56))
     draw.SimpleText(string.upper(tostring(wc.CurrentLabel or "ARME ACTUELLE")), "MedalBarracks_WepSmall", sepX + S(14), bottomY - S(52), Color(232, 234, 222, 150), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     draw.SimpleText(weaponDisplayName(active), "MedalBarracks_WepCurrent", sepX + S(14), bottomY - S(34), Color(240, 242, 232, 235), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    if searching then
+        -- Le soldat fouille son équipement pour sortir l'arme choisie.
+        local dots = string.rep(".", 1 + math.floor(CurTime() * 3) % 3)
+        draw.SimpleText("RECHERCHE" .. dots, "MedalBarracks_WepSmall", sepX + S(14), bottomY - S(70), Color(148, 156, 108, 170 + math.sin(CurTime() * 6) * 60), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    end
 
     -- ===== Pile de silhouettes, visible quelques secondes après un changement =====
     local remaining = weaponSelectorUntil - CurTime()
@@ -2746,27 +2810,35 @@ hook.Add("HUDPaint", "MedalBarracks_WeaponSelectorPaint", function()
     local gap = S(tonumber(wc.IconGap) or 10)
     local maxItems = tonumber(wc.MaxItems) or 7
 
-    local activeIndex = 1
-    for i, wep in ipairs(weps) do if wep == active then activeIndex = i break end end
-    local first = math.max(1, math.min(activeIndex - math.floor(maxItems / 2), math.max(1, #weps - maxItems + 1)))
+    local markedIndex = 1
+    for i, wep in ipairs(weps) do if wep == marked then markedIndex = i break end end
+    local first = math.max(1, math.min(markedIndex - math.floor(maxItems / 2), math.max(1, #weps - maxItems + 1)))
     local last = math.min(#weps, first + maxItems - 1)
 
     local y = bottomY - S(96) - (last - first + 1) * (iconH + gap)
     for idx = first, last do
         local wep = weps[idx]
         if IsValid(wep) then
-            local selected = wep == active
+            local selected = wep == marked
+            local blocked = MedalBarracks.WeaponSelectorBlocked and MedalBarracks.WeaponSelectorBlocked(wep)
             local rowY = y + (idx - first) * (iconH + gap)
             if selected then
-                -- Bandeau clair translucide derrière l'arme courante, comme sur HLL.
+                -- Bandeau clair translucide derrière la sélection, comme sur HLL.
                 draw.RoundedBox(0, rightX - iconW - S(56), rowY - S(5), iconW + S(56), iconH + S(10), Color(235, 238, 226, alpha * 0.32))
             end
             local a = selected and alpha or alpha * 0.62
+            if blocked then a = a * 0.35 end
             local im = weaponIconMaterial(wep)
             if im then
                 drawMatFit(im, rightX - iconW - S(14), rowY, iconW, iconH, "contain", a)
             else
                 drawWeaponSilhouette(rightX - iconW - S(14), rowY, iconW, iconH, wep:GetClass(), a)
+            end
+            if blocked then
+                local readyAt = ply:GetNWFloat("MedalSupply_ReadyAt", 0)
+                local total = math.max(ply:GetNWFloat("MedalSupply_RechargeTime", 60), 1)
+                local prog = math.Clamp(1 - (readyAt - CurTime()) / total, 0, 1)
+                draw.SimpleText(math.floor(prog * 100) .. "%", "MedalBarracks_WepSmall", rightX - iconW - S(26), rowY + iconH / 2, Color(148, 156, 108, alpha), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
             end
         end
     end

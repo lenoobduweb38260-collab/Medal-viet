@@ -13,6 +13,7 @@ MedalBarracks = MedalBarracks or {}
 local cfg = MedalBarracks.Config or {}
 
 util.AddNetworkString("MedalRadio_Place")
+util.AddNetworkString("MedalRadio_Handset")
 util.AddNetworkString("MedalRadio_SetFreq")
 util.AddNetworkString("MedalRadio_Remove")
 util.AddNetworkString("MedalRadio_OpenMenu")
@@ -158,6 +159,97 @@ net.Receive("MedalRadio_Remove", function(_, ply)
     if ent:GetPos():Distance(ply:GetPos()) > 140 then return end
     ent:Remove()
     ply:ChatPrint("[Radio] Radio remballée.")
+end)
+
+-- =========================
+-- Combiné téléphonique : le radioman parle DANS la radio (voix réelle).
+-- =========================
+local function handsetCfg()
+    return radioCfg().Handset or {}
+end
+
+function MedalBarracks.ToggleRadioHandset(ply, ent)
+    if handsetCfg().Enabled == false then return end
+    if not IsValid(ply) or not IsValid(ent) or ent:GetClass() ~= "medal_radio_ent" then return end
+
+    if ply:GetNWBool("MedalRadio_Handset", false) then
+        ply:SetNWBool("MedalRadio_Handset", false)
+        ply:SetNWEntity("MedalRadio_HandsetEnt", NULL)
+        ply:ChatPrint("[Radio] Tu as raccroché le combiné.")
+        return
+    end
+
+    -- Réservé aux radiomen et aux gradés de la même faction que le poste.
+    if not (isRadioman(ply) or isCommand(ply)) then
+        ply:ChatPrint("[Radio] Seuls les radiomen et les gradés utilisent le combiné.")
+        return
+    end
+    if ent:GetNWString("MedalRadio_Army", "") ~= armyOf(ply) then
+        ply:ChatPrint("[Radio] Ce poste n'est pas de ta faction.")
+        return
+    end
+
+    ply:SetNWBool("MedalRadio_Handset", true)
+    ply:SetNWEntity("MedalRadio_HandsetEnt", ent)
+    local freqID = ent:GetNWString("MedalRadio_Freq", "radioman")
+    ply:ChatPrint("[Radio] Combiné décroché — ta voix passe sur " .. (freqID == "sl" and "le canal COMMANDEMENT" or "le RÉSEAU RADIO") .. ".")
+end
+
+-- Le bouton DÉCROCHER/RACCROCHER du menu de la radio.
+net.Receive("MedalRadio_Handset", function(_, ply)
+    local ent = net.ReadEntity()
+    if not IsValid(ent) or ent:GetClass() ~= "medal_radio_ent" then return end
+    if ent:GetPos():Distance(ply:GetPos()) > 200 then return end
+    MedalBarracks.ToggleRadioHandset(ply, ent)
+end)
+
+-- Raccrochage automatique : trop loin de la radio, mort, ou radio détruite.
+timer.Create("MedalRadio_HandsetWatch", 0.5, 0, function()
+    local maxDist = tonumber(handsetCfg().MaxDistanceFromRadio) or 190
+    for _, ply in ipairs(player.GetHumans()) do
+        if ply:GetNWBool("MedalRadio_Handset", false) then
+            local ent = ply:GetNWEntity("MedalRadio_HandsetEnt")
+            if not IsValid(ent) or not ply:Alive() or ply:GetPos():Distance(ent:GetPos()) > maxDist then
+                ply:SetNWBool("MedalRadio_Handset", false)
+                ply:SetNWEntity("MedalRadio_HandsetEnt", NULL)
+                ply:ChatPrint("[Radio] Combiné raccroché.")
+            end
+        end
+    end
+end)
+
+-- Routage RÉEL de la voix pendant un appel au combiné.
+hook.Add("PlayerCanHearPlayersVoice", "MedalRadio_HandsetVoice", function(listener, talker)
+    if not IsValid(talker) or not talker:GetNWBool("MedalRadio_Handset", false) then return end
+    local ent = talker:GetNWEntity("MedalRadio_HandsetEnt")
+    if not IsValid(ent) then return end
+
+    local hc = handsetCfg()
+    local freqID = ent:GetNWString("MedalRadio_Freq", "radioman")
+    local armyID = ent:GetNWString("MedalRadio_Army", "")
+
+    -- Les joueurs proches du parleur l'entendent parler dans le combiné (voix 3D).
+    if listener:GetPos():Distance(talker:GetPos()) <= (tonumber(hc.LocalVoiceRadius) or 420) then
+        return true, true
+    end
+
+    -- Destinataires du réseau selon la fréquence de la radio utilisée.
+    if armyOf(listener) == armyID then
+        if freqID == "sl" then
+            if isCommand(listener) then return true, false end
+        else
+            if isRadioman(listener) then return true, false end
+        end
+    end
+
+    -- Toute personne proche d'une radio posée sur la même fréquence entend l'appel.
+    local radius = hearRadiusUnits()
+    for _, radio in ipairs(deployedRadios(armyID, freqID)) do
+        if listener:GetPos():Distance(radio:GetPos()) <= radius then return true, true end
+    end
+
+    -- Hors réseau : l'appel reste privé si la config le demande.
+    if hc.RestrictOtherListeners ~= false then return false end
 end)
 
 -- =========================
