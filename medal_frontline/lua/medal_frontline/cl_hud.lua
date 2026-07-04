@@ -110,6 +110,51 @@ hook.Add("HUDPaint", "MedalFrontline_HUD", function()
         y = y + S(30)
     end
 
+    -- Ordre de capture au-dessus de la barre (s'adapte au nombre de zones).
+    -- Warfare : flèches depuis chaque camp vers le centre.
+    -- Offensive : flèches dans le sens d'attaque, numéros d'ordre 1..N.
+    if hc.ShowOrder ~= false and #zones > 1 and state.mode ~= "skirmish" then
+        local oy = y - S(15)
+        for i = 1, #zones - 1 do
+            local ax = x0 + (i - 1) * (segW + gap) + segW + gap / 2
+            local dir, acol = 1, COL_NEUTRAL
+            if state.mode == "offensive" then
+                dir = state.attacker == FAC2 and -1 or 1
+                acol = facColor(state.attacker)
+            else
+                -- Warfare : moitié gauche pousse à droite, moitié droite à gauche.
+                dir = i < #zones / 2 and 1 or -1
+                acol = facColor(dir == 1 and FAC1 or FAC2)
+            end
+            local cx = ax
+            local aw = S(8)
+            surface.SetDrawColor(acol.r, acol.g, acol.b, 200)
+            -- Petite flèche triangulaire.
+            draw.NoTexture()
+            if dir == 1 then
+                surface.DrawPoly({{x = cx - aw, y = oy - aw}, {x = cx + aw, y = oy}, {x = cx - aw, y = oy + aw}})
+            else
+                surface.DrawPoly({{x = cx + aw, y = oy - aw}, {x = cx - aw, y = oy}, {x = cx + aw, y = oy + aw}})
+            end
+        end
+        if state.mode == "offensive" then
+            -- Numéro d'ordre de capture sur chaque secteur (1 = premier à prendre).
+            local order = {}
+            local defender = state.attacker == FAC1 and FAC2 or FAC1
+            local seq = 1
+            local rng = state.attacker == FAC1 and 1 or #zones
+            local step = state.attacker == FAC1 and 1 or -1
+            for k = 0, #zones - 1 do
+                local idx = rng + step * k
+                if zones[idx] and zones[idx].owner == defender then order[idx] = seq; seq = seq + 1 end
+            end
+            for idx, num in pairs(order) do
+                local nx = x0 + (idx - 1) * (segW + gap) + segW / 2
+                draw.SimpleText("#" .. num, "MFront_Small", nx, oy - S(16), facColor(state.attacker), TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+            end
+        end
+    end
+
     for i, z in ipairs(zones) do
         local x = x0 + (i - 1) * (segW + gap)
         local col = z.owner ~= "" and facColor(z.owner) or COL_NEUTRAL

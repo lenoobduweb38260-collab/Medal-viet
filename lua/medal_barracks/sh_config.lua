@@ -1175,7 +1175,7 @@ cfg.Armies = {
                 icon = "✣",
                 roles = {
                     Role("commandant", "COMMANDANT", "TEAM_MEDAL_US_COMMANDANT", "Commandant US", 8, "✣", US_MODEL, {
-                        L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol"}, {Pistol = 60}, {"Carte tactique", "Radio", "Jumelles"}, {image = "medal/loadouts/pistol.png", preview = {type = "model", model = US_MODEL}}),
+                        L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol", "medal_map"}, {Pistol = 60}, {"Carte tactique", "Radio", "Jumelles"}, {image = "medal/loadouts/pistol.png", preview = {type = "model", model = US_MODEL}}),
                         L("veteran", "VÉTÉRAN", 4, {"weapon_pistol", "weapon_smg1"}, {Pistol = 60, SMG1 = 90}, {"Radio longue portée", "Fumigène"}),
                     }),
                 }
@@ -1186,7 +1186,7 @@ cfg.Armies = {
                 icon = "▰",
                 roles = {
                     Role("officier", "OFFICIER", "TEAM_MEDAL_US_OFFICIER", "Officier US", 7, "▰", US_MODEL_2, {
-                        L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol"}, {Pistol = 80}, {"Radio", "Pansement", "Grenade fumigène"}),
+                        L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol", "medal_map"}, {Pistol = 80}, {"Radio", "Pansement", "Grenade fumigène"}),
                         L("homme_de_pointe", "HOMME DE POINTE", 3, {"weapon_pistol", "weapon_smg1"}, {Pistol = 80, SMG1 = 120}, {"Radio", "Grenade"}),
                         L("sous_officier", "SOUS-OFFICIER", 6, {"weapon_357", "weapon_smg1"}, {["357"] = 24, SMG1 = 120}, {"Radio", "Carte tactique"}),
                     }),
@@ -1283,7 +1283,7 @@ cfg.Armies = {
                 icon = "✣",
                 roles = {
                     Role("chef_section", "CHEF DE SECTION", "TEAM_MEDAL_VC_CHEF", "Chef de Section Vietcong", 8, "✣", VC_MODEL, {
-                        L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol"}, {Pistol = 70}, {"Carte", "Radio", "Jumelles"}),
+                        L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol", "medal_map"}, {Pistol = 70}, {"Carte", "Radio", "Jumelles"}),
                         L("cadre_veteran", "CADRE VÉTÉRAN", 4, {"weapon_pistol", "weapon_smg1"}, {Pistol = 70, SMG1 = 110}, {"Radio", "Fumigène"}),
                     }),
                     Role("commissaire", "COMMISSAIRE POLITIQUE", "TEAM_MEDAL_VC_COMMISSAIRE", "Commissaire Politique Vietcong", 6, "✣", VC_MODEL_2, {
@@ -1297,7 +1297,7 @@ cfg.Armies = {
                 icon = "▰",
                 roles = {
                     Role("officier", "OFFICIER", "TEAM_MEDAL_VC_OFFICIER", "Officier Vietcong", 7, "▰", VC_MODEL, {
-                        L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol"}, {Pistol = 80}, {"Radio", "Pansement"}),
+                        L("standard", "MODÈLE STANDARD", 1, {"weapon_pistol", "medal_map"}, {Pistol = 80}, {"Radio", "Pansement"}),
                         L("veteran", "VÉTÉRAN", 3, {"weapon_pistol", "weapon_smg1"}, {Pistol = 80, SMG1 = 120}, {"Radio", "Grenade"}),
                     }),
                     Role("soldat", "SOLDAT", "TEAM_MEDAL_VC_SOLDAT", "Soldat Vietcong", 1, "✦", VC_MODEL_2, {

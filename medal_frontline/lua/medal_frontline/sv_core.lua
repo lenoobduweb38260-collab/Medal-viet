@@ -90,6 +90,7 @@ local function saveZones()
     end
     file.Write(dataPath(), util.TableToJSON(out, true))
 end
+MedalFrontline.SaveZones = saveZones
 
 local function loadZones()
     round.zones = {}
@@ -142,6 +143,7 @@ local function syncAll(target)
     if target then net.Send(target) else net.Broadcast() end
 end
 MedalFrontline.Sync = syncAll
+MedalFrontline.IsStaff = isStaff
 
 hook.Add("PlayerInitialSpawn", "MedalFrontline_SyncJoin", function(ply)
     timer.Simple(6, function() if IsValid(ply) then syncAll(ply) end end)
@@ -406,4 +408,156 @@ net.Receive("MedalFrontline_Staff", function(_, ply)
         end
     end
     syncAll()
+end)
+
+-- =========================
+-- SWEP de création de zones (staff) : ajout/déplacement/suppression au regard.
+-- =========================
+util.AddNetworkString("MedalFrontline_ZoneTool")
+
+net.Receive("MedalFrontline_ZoneTool", function(_, ply)
+    if not isStaff(ply) then ply:ChatPrint("[Frontline] Outil réservé au staff."); return end
+    local action = net.ReadString()
+
+    if action == "add" then
+        local pos = net.ReadVector()
+        if #round.zones >= 12 then ply:ChatPrint("[Frontline] Maximum 12 secteurs."); return end
+        local i = #round.zones + 1
+        table.insert(round.zones, {
+            name = (cfg.ZoneNames or {})[i] or ("POINT " .. i),
+            pos = pos,
+            radius = tonumber(cfg.DefaultZoneRadius) or 900,
+            owner = "", progress = 0, locked = true, contested = false,
+        })
+        MedalFrontline.SaveZones()
+        ply:ChatPrint("[Frontline] Secteur " .. round.zones[i].name .. " créé.")
+    elseif action == "move" then
+        local pos = net.ReadVector()
+        -- Déplace le secteur le plus proche du point visé.
+        local best, bestDist
+        for idx, z in ipairs(round.zones) do
+            local d = z.pos:DistToSqr(pos)
+            if not bestDist or d < bestDist then best, bestDist = idx, d end
+        end
+        if best then
+            round.zones[best].pos = pos
+            MedalFrontline.SaveZones()
+            ply:ChatPrint("[Frontline] Secteur " .. round.zones[best].name .. " déplacé.")
+        end
+    elseif action == "remove" then
+        local pos = net.ReadVector()
+        local best, bestDist
+        for idx, z in ipairs(round.zones) do
+            local d = z.pos:DistToSqr(pos)
+            if not bestDist or d < bestDist then best, bestDist = idx, d end
+        end
+        if best and bestDist and bestDist <= (round.zones[best].radius * round.zones[best].radius) then
+            local name = round.zones[best].name
+            table.remove(round.zones, best)
+            -- Renumérote les noms par défaut.
+            for idx, z in ipairs(round.zones) do
+                if string.match(z.name, "^POINT ") or string.find((cfg.ZoneNames or {})[idx] or "", z.name, 1, true) then
+                    z.name = (cfg.ZoneNames or {})[idx] or ("POINT " .. idx)
+                end
+            end
+            MedalFrontline.SaveZones()
+            ply:ChatPrint("[Frontline] Secteur " .. name .. " supprimé.")
+        end
+    elseif action == "radius" then
+        local pos = net.ReadVector()
+        local delta = net.ReadInt(16)
+        local best, bestDist
+        for idx, z in ipairs(round.zones) do
+            local d = z.pos:DistToSqr(pos)
+            if not bestDist or d < bestDist then best, bestDist = idx, d end
+        end
+        if best then
+            round.zones[best].radius = math.Clamp(round.zones[best].radius + delta, 150, 4000)
+            MedalFrontline.SaveZones()
+        end
+    end
+    syncAll()
+end)
+
+-- =========================
+-- Carte tactique : marqueurs SL / Commandant.
+-- Les marqueurs sont partagés par faction, envoyés uniquement aux joueurs
+-- "commandement" de la même faction.
+-- =========================
+util.AddNetworkString("MedalFrontline_Markers")
+util.AddNetworkString("MedalFrontline_MarkerAction")
+
+MedalFrontline.Markers = MedalFrontline.Markers or {} -- [faction] = { {id, x,y,z, type, label, author} }
+
+local function isLeader(ply)
+    if not IsValid(ply) then return false end
+    if ply:GetNWBool("MedalBarracks_SquadLeader", false) then return true end
+    local role = ply:GetNWString("MedalBarracks_Role", "")
+    for _, r in ipairs((cfg.Map or {}).LeaderRoleIDs or {}) do
+        if tostring(r) == role then return true end
+    end
+    return ply:IsAdmin() -- le staff voit tout aussi
+end
+MedalFrontline.IsLeader = isLeader
+
+local function sendMarkers(fac, target)
+    local list = MedalFrontline.Markers[fac] or {}
+    net.Start("MedalFrontline_Markers")
+        net.WriteString(fac)
+        net.WriteUInt(#list, 8)
+        for _, m in ipairs(list) do
+            net.WriteVector(m.pos)
+            net.WriteString(m.type)
+            net.WriteString(m.label)
+            net.WriteString(m.author)
+        end
+    if target then net.Send(target) else
+        for _, p in ipairs(player.GetHumans()) do
+            if armyOf(p) == fac and isLeader(p) then net.Send(p) end
+        end
+    end
+end
+MedalFrontline.SendMarkers = sendMarkers
+
+net.Receive("MedalFrontline_MarkerAction", function(_, ply)
+    local mapCfg = cfg.Map or {}
+    if not isLeader(ply) then ply:ChatPrint("[Carte] Réservé aux chefs d'escouade et au commandement."); return end
+    local fac = armyOf(ply)
+    if fac == "" then return end
+    MedalFrontline.Markers[fac] = MedalFrontline.Markers[fac] or {}
+    local list = MedalFrontline.Markers[fac]
+
+    local action = net.ReadString()
+    if action == "add" then
+        local pos = net.ReadVector()
+        local mtype = net.ReadString()
+        local label = string.sub(net.ReadString(), 1, 40)
+        if #list >= (tonumber(mapCfg.MaxMarkers) or 24) then table.remove(list, 1) end
+        table.insert(list, {pos = pos, type = mtype, label = label, author = ply:Nick()})
+    elseif action == "remove" then
+        local pos = net.ReadVector()
+        local best, bestDist
+        for idx, m in ipairs(list) do
+            local d = m.pos:DistToSqr(pos)
+            if not bestDist or d < bestDist then best, bestDist = idx, d end
+        end
+        if best then table.remove(list, best) end
+    elseif action == "clear" then
+        MedalFrontline.Markers[fac] = {}
+    end
+    sendMarkers(fac)
+end)
+
+-- Un chef qui vient de prendre son rôle reçoit les marqueurs actuels.
+hook.Add("PlayerInitialSpawn", "MedalFrontline_MarkersJoin", function(ply)
+    timer.Simple(7, function()
+        if IsValid(ply) and isLeader(ply) then sendMarkers(armyOf(ply), ply) end
+    end)
+end)
+
+-- Renvoi périodique (le statut de leader peut changer après un choix de rôle).
+timer.Create("MedalFrontline_MarkersRefresh", 8, 0, function()
+    for _, ply in ipairs(player.GetHumans()) do
+        if isLeader(ply) then sendMarkers(armyOf(ply), ply) end
+    end
 end)

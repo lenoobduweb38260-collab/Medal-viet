@@ -73,6 +73,33 @@ cfg.HUD = {
     Skew = 10,              -- inclinaison des segments façon ruban HLL
     ShowTimer = true,
     ShowActiveCounts = true, -- "tab" des joueurs actifs des deux camps
+    ShowOrder = true,        -- flèches d'ordre de capture au-dessus de la barre
+}
+
+-- SWEP de création de zones (staff) : place-toi et clique pour créer/déplacer.
+cfg.ZoneTool = {
+    SWEP = "medal_zone_tool",
+    HighlightDistance = 8000, -- distance max d'affichage des zones en surbrillance
+}
+
+-- Carte tactique (SWEP) : marqueurs visibles UNIQUEMENT par les SL / Commandants.
+-- Le rendu "vue de dessus" utilise render.RenderView depuis le ciel de la map.
+cfg.Map = {
+    SWEP = "medal_map",
+    MaxMarkers = 24,          -- marqueurs simultanés par faction
+    -- Hauteur de la caméra top-down au-dessus du centre de la map.
+    CameraHeight = 12000,
+    -- Rôles medal_barracks considérés comme "commandement" (voient/posent les
+    -- marqueurs). Les chefs d'escouade (NWBool MedalBarracks_SquadLeader) le sont
+    -- aussi automatiquement.
+    LeaderRoleIDs = {"commandant", "officier", "chef_section", "commissaire", "tank_commander"},
+    MarkerTypes = {
+        {id = "attack",  name = "ATTAQUE",   color = Color(200, 70, 55)},
+        {id = "defend",  name = "DÉFENSE",   color = Color(90, 130, 190)},
+        {id = "move",    name = "MOUVEMENT", color = Color(198, 181, 94)},
+        {id = "enemy",   name = "ENNEMI",    color = Color(210, 60, 60)},
+        {id = "objective", name = "OBJECTIF", color = Color(120, 200, 110)},
+    },
 }
 
 -- Zones par map (optionnel : le staff peut aussi les définir en jeu avec le

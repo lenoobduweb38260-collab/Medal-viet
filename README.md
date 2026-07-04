@@ -25,3 +25,13 @@ compteur de joueurs actifs (AFK exclus).
 garrysmod/addons/medal_barracks_menu_vietnam/  <- contenu de la racine (lua/, materials/, ...)
 garrysmod/addons/medal_frontline/              <- dossier medal_frontline/
 ```
+
+## 3. `medal_garage/` (addon séparé)
+Garage de véhicules par niveau (compatible véhicules Workshop), système
+d'essence, HUD véhicule façon Hell Let Loose et changement de siège HLL.
+
+- Documentation : [medal_garage/README_FR.md](medal_garage/README_FR.md)
+
+```
+garrysmod/addons/medal_garage/                 <- dossier medal_garage/
+```

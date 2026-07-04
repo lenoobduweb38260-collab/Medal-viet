@@ -33,3 +33,18 @@ Commande : `medal_frontline_staff` (admin).
 ## Config
 `lua/medal_frontline/sh_config.lua` : factions, couleurs, vitesses de capture,
 rayon des secteurs, durées par mode, tickets d'escarmouche, HUD.
+
+## SWEPs (outils)
+- **Outil de secteur** (`medal_zone_tool`, staff) : en main, toutes les zones
+  s'affichent en surbrillance avec leur nom au-dessus. Clic gauche = créer,
+  clic droit = déplacer la plus proche, R = supprimer, molette = rayon.
+- **Carte tactique** (`medal_map`) : clic gauche ouvre une carte vue de dessus
+  de toute la map. Les **chefs d'escouade et le commandement** peuvent y poser
+  des marqueurs (attaque, défense, mouvement, ennemi, objectif) **visibles
+  uniquement par les autres chefs/commandement de leur camp**. La carte est
+  donnée automatiquement aux loadouts commandant/officier.
+
+## Ordre de capture (HUD)
+Au-dessus de la barre de secteurs, des flèches indiquent l'ordre/le sens de
+capture ; en mode Offensive, chaque secteur porte son numéro d'ordre (#1, #2…).
+Tout s'adapte automatiquement au nombre de secteurs créés.

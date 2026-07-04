@@ -1,4 +1,31 @@
-# Medal Barracks Menu Vietnam — v20 Anti-AFK, musiques Dropbox & Medal Frontline
+# Medal Barracks Menu Vietnam — v21 Outils Frontline, carte tactique & Medal Garage
+
+## v21 — SWEP secteurs, carte tactique SL/Commandant, ordre de capture, Medal Garage
+
+### Frontline : outils et ordre de capture (addon `medal_frontline`)
+- **SWEP outil de secteur** (`medal_zone_tool`, staff) : en main, toutes les
+  zones apparaissent en surbrillance avec leur nom au-dessus. Clic gauche créer,
+  clic droit déplacer, R supprimer, molette rayon.
+- **SWEP carte tactique** (`medal_map`) : vue de dessus de toute la map ; les
+  chefs d'escouade et le commandement y posent des marqueurs (attaque, défense,
+  mouvement, ennemi, objectif) **visibles uniquement par les chefs/commandement
+  de leur camp**. Donnée automatiquement aux loadouts commandant/officier.
+- **Ordre de capture au-dessus de l'écran** : flèches directionnelles + numéros
+  d'ordre en mode Offensive, s'adaptant au nombre de secteurs créés.
+
+### NOUVEL ADDON SÉPARÉ : Medal Garage (dossier `medal_garage/`)
+Garage de véhicules façon HLL — voir `medal_garage/README_FR.md`.
+- Menu garage (F4) : véhicules **débloqués par niveau**, compatibles avec
+  n'importe quel véhicule Workshop (spawn par class), restrictions de rôle.
+- **Système d'essence** : consommation à l'usage, panne sèche, plein automatique
+  au garage, ravitaillement manuel (touche G) consommant le ravitaillement des
+  caisses de Soutien.
+- **HUD véhicule façon HLL** : nom, siège, vitesse, jauge d'essence, vie.
+- **Changement de siège façon HLL** (touche R) : compatible pods GMod et API
+  Simfphys / LFS / Glide.
+- Points de garage posés par le staff (outil `medal_garage_point`), par map.
+
+---
 
 ## v20 — Anti-AFK XP, gestionnaire de musiques, addon Medal Frontline
 
