@@ -48,3 +48,8 @@ rayon des secteurs, durées par mode, tickets d'escarmouche, HUD.
 Au-dessus de la barre de secteurs, des flèches indiquent l'ordre/le sens de
 capture ; en mode Offensive, chaque secteur porte son numéro d'ordre (#1, #2…).
 Tout s'adapte automatiquement au nombre de secteurs créés.
+
+## Drapeaux (façon MG CTF)
+Chaque secteur porte un **mât avec un drapeau** coloré par camp ; pendant une
+capture, le drapeau monte/descend selon la progression (comme un drapeau CTF
+qu'on hisse), et devient blanc quand le point est contesté.

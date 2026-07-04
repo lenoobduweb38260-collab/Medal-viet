@@ -7,6 +7,10 @@ Addon **séparé** pour Garry's Mod. Fonctionne seul, mais s'intègre à
 Copie `medal_garage/` dans `garrysmod/addons/`.
 
 ## Garage
+
+Menu façon **William's Car Dealer** : liste des véhicules à gauche, grand
+aperçu 3D rotatif à droite avec fiche et bouton **SORTIR CE VÉHICULE**.
+
 - Ouvre avec **F4** (`cfg.OpenKey`) ou la commande `medal_garage`.
 - Menu façon HLL : onglets par catégorie, véhicules **débloqués par niveau**
   (verrouillés + cadenas sinon), restrictions de rôle possibles.

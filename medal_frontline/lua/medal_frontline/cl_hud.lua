@@ -219,3 +219,65 @@ hook.Add("HUDPaint", "MedalFrontline_HUD", function()
         end
     end
 end)
+
+-- =========================
+-- Drapeaux de capture en jeu (façon MG CTF).
+-- Un mât par secteur : le drapeau du camp propriétaire flotte en haut ; pendant
+-- une capture, le drapeau descend/monte selon la progression.
+-- =========================
+local flagPole = Material("cable/cable2")
+hook.Add("PostDrawTranslucentRenderables", "MedalFrontline_Flags", function(depth, sky)
+    if sky then return end
+    local ply = LocalPlayer()
+    if not IsValid(ply) then return end
+
+    for _, z in ipairs((MedalFrontline.State or {}).zones or {}) do
+        if z.pos and not z.hidden and ply:GetPos():Distance(z.pos) < 6000 then
+            local base = z.pos + Vector(0, 0, 4)
+            local poleH = 180
+            local top = base + Vector(0, 0, poleH)
+
+            -- Mât.
+            render.SetColorMaterial()
+            render.DrawBeam(base, top, 4, 0, 1, Color(40, 34, 26, 255))
+
+            -- Progression -> hauteur du drapeau sur le mât (CTF : drapeau hissé).
+            local ownerCol = z.owner ~= "" and facColor(z.owner) or COL_NEUTRAL
+            local frac
+            if z.owner == FAC1 then frac = (z.progress + 100) / 200
+            elseif z.owner == FAC2 then frac = (-z.progress + 100) / 200
+            else frac = 0.5 end
+            frac = math.Clamp(frac, 0.12, 1)
+
+            local flagH = 46
+            local flagW = 74
+            local fy = base.z + poleH * frac
+            local flagBottom = Vector(base.x, base.y, fy - flagH)
+            local flagTop = Vector(base.x, base.y, fy)
+
+            -- Le drapeau "flotte" : petit décalage animé.
+            local wave = math.sin(CurTime() * 3 + z.pos.x * 0.01) * 6
+            local right = Vector(0, 1, 0)
+            local p1 = flagTop
+            local p2 = flagTop + right * flagW + Vector(0, 0, wave)
+            local p3 = flagBottom + right * flagW + Vector(0, 0, wave)
+            local p4 = flagBottom
+
+            render.SetColorMaterialIgnoreZ()
+            local col = z.contested and Color(235, 235, 235) or ownerCol
+            render.DrawQuad(p1, p2, p3, p4, Color(col.r, col.g, col.b, 235))
+            -- Bord sombre.
+            render.DrawLine(p1, p2, Color(0, 0, 0, 160), false)
+            render.DrawLine(p4, p3, Color(0, 0, 0, 160), false)
+
+            -- Nom du secteur au sommet du mât, face au joueur.
+            local labelPos = top + Vector(0, 0, 26)
+            local ang = (ply:EyePos() - labelPos); ang.z = 0; ang = ang:Angle()
+            ang:RotateAroundAxis(ang:Up(), -90)
+            ang:RotateAroundAxis(ang:Forward(), 90)
+            cam.Start3D2D(labelPos, ang, 0.25)
+                draw.SimpleText(z.name or "POINT", "MFront_Zone", 0, 0, Color(240, 242, 232), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            cam.End3D2D()
+        end
+    end
+end)

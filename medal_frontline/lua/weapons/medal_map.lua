@@ -34,6 +34,7 @@ SWEP.DrawAmmo = false
 
 function SWEP:PrimaryAttack()
     self:SetNextPrimaryFire(CurTime() + 0.4)
+    if not IsFirstTimePredicted() then return end
     if CLIENT and MedalFrontline.ToggleMap then MedalFrontline.ToggleMap() end
 end
 
@@ -93,20 +94,23 @@ end
 local function captureMap()
     local center, height, span = mapView()
     local eye = Vector(center.x, center.y, center.z + height)
-    render.PushRenderTarget(mapRT)
-        render.Clear(15, 17, 13, 255, true, true)
-        cam.Start2D()
-            render.RenderView({
-                origin = eye,
-                angles = Angle(90, 0, 0),
-                x = 0, y = 0, w = 1024, h = 1024,
-                drawviewmodel = false,
-                drawhud = false,
-                fov = 90,
-                ortho = {left = -span, right = span, top = -span, bottom = span},
-            })
-        cam.End2D()
-    render.PopRenderTarget()
+    -- Le rendu vue de dessus peut échouer sur certaines maps : on protège tout.
+    pcall(function()
+        render.PushRenderTarget(mapRT)
+            render.Clear(15, 17, 13, 255, true, true)
+            cam.Start2D()
+                render.RenderView({
+                    origin = eye,
+                    angles = Angle(90, 0, 0),
+                    x = 0, y = 0, w = 1024, h = 1024,
+                    drawviewmodel = false,
+                    drawhud = false,
+                    fov = 90,
+                    ortho = {left = -span, right = span, top = -span, bottom = span},
+                })
+            cam.End2D()
+        render.PopRenderTarget()
+    end)
     MedalFrontline.MapCenter = center
     MedalFrontline.MapSpan = span
 end
@@ -291,6 +295,22 @@ function MedalFrontline.ToggleMap()
         net.SendToServer()
     end
 
+    -- Bouton FERMER visible (en plus de ÉCHAP) pour toujours pouvoir sortir.
+    local closeBtn = vgui.Create("DButton", frame)
+    closeBtn:SetText("")
+    closeBtn:SetSize(S(160), S(40))
+    closeBtn:SetPos(ScrW() - S(180), S(30))
+    closeBtn.Paint = function(self, w, h)
+        self.hoverAnim = Lerp(FrameTime() * 10, self.hoverAnim or 0, self:IsHovered() and 1 or 0)
+        draw.RoundedBox(0, 0, 0, w, h, Color(18, 21, 15, 210 + self.hoverAnim * 40))
+        draw.RoundedBox(0, 0, 0, S(3), h, Color(165, 48, 40))
+        surface.SetDrawColor(214, 220, 196, 60)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        draw.SimpleText("FERMER (ÉCHAP)", "MMap_Small", w / 2, h / 2, Color(232, 234, 222), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    closeBtn.DoClick = function() frame:Remove() end
+
+    frame:SetKeyboardInputEnabled(true)
     frame.OnKeyCodePressed = function(self, key)
         if key == KEY_ESCAPE then self:Remove() end
     end

@@ -27,13 +27,13 @@ SWEP.DrawAmmo = false
 
 function SWEP:PrimaryAttack()
     self:SetNextPrimaryFire(CurTime() + 0.4)
-    if CLIENT then return end
+    if not IsFirstTimePredicted() or not CLIENT then return end
     net.Start("MedalGarage_PointAction") net.WriteString("add") net.SendToServer()
 end
 
 function SWEP:SecondaryAttack()
     self:SetNextSecondaryFire(CurTime() + 0.4)
-    if CLIENT then return end
+    if not IsFirstTimePredicted() or not CLIENT then return end
     net.Start("MedalGarage_PointAction") net.WriteString("clear") net.SendToServer()
 end
 
