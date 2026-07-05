@@ -11,7 +11,15 @@ MedalGarage = MedalGarage or {}
 MedalGarage.Config = MedalGarage.Config or {}
 local cfg = MedalGarage.Config
 
-cfg.Command = "medal_garage"          -- ouvre le garage
+cfg.Command = "medal_garage"          -- ouvre le garage (ou !garage en chat)
+
+-- Rangs autorisés à ouvrir la CONFIG in-game du garage (façon WCD).
+-- Les admins/superadmins y ont toujours accès.
+cfg.AdminRanks = {
+    superadmin = true,
+    owner = true,
+    fondateur = true,
+}
 cfg.OpenKey = KEY_F4                   -- touche d'ouverture (nil pour désactiver)
 
 -- Niveau du joueur : par défaut on lit le niveau général de medal_barracks.

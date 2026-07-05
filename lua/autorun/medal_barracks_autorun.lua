@@ -102,6 +102,7 @@ if SERVER then
     include("medal_barracks/sv_radio.lua")
     include("medal_barracks/sv_supply.lua")
     include("medal_barracks/sv_music.lua")
+    include("medal_barracks/sv_chat.lua")
 else
     include("medal_barracks/sh_config.lua")
     include("medal_barracks/cl_ui.lua")

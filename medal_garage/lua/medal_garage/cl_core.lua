@@ -26,6 +26,60 @@ net.Receive("MedalGarage_SeatInfo", function()
 end)
 
 MedalGarage.StaffPoints = MedalGarage.StaffPoints or {}
+
+-- Liste dealer + paramètres reçus du serveur (config in-game façon WCD).
+MedalGarage.DealerData = MedalGarage.DealerData or nil
+net.Receive("MedalGarage_DealerList", function()
+    local len = net.ReadUInt(24)
+    if len <= 0 or len > 262144 then return end
+    local data = util.JSONToTable(util.Decompress(net.ReadData(len)) or "")
+    if istable(data) then
+        MedalGarage.DealerData = data
+        if IsValid(MedalGarage.Frame) and MedalGarage.Frame.RefreshAll then MedalGarage.Frame.RefreshAll() end
+    end
+end)
+
+local function dealerVehicles()
+    if MedalGarage.DealerData and istable(MedalGarage.DealerData.vehicles) and #MedalGarage.DealerData.vehicles > 0 then
+        return MedalGarage.DealerData.vehicles
+    end
+    return cfg.Vehicles or {}
+end
+
+local function dealerCategories()
+    local seen, out = {}, {}
+    for _, v in ipairs(dealerVehicles()) do
+        local c = v.category or "TRANSPORT"
+        if not seen[c] then seen[c] = true; table.insert(out, c) end
+    end
+    if #out == 0 then return cfg.Categories or {"TRANSPORT"} end
+    table.sort(out)
+    return out
+end
+
+-- Normalisation Dropbox pour le fond du menu.
+local function directMediaURL(url)
+    url = tostring(url or "")
+    if url == "" then return "" end
+    url = string.gsub(url, "^https://www%.dropbox%.com/", "https://dl.dropboxusercontent.com/")
+    if string.find(url, "dropboxusercontent", 1, true) then
+        url = string.gsub(url, "([%?&])dl=%d", "%1")
+        url = string.gsub(url, "%?&", "?")
+        url = string.gsub(url, "[?&]$", "")
+        url = url .. (string.find(url, "?", 1, true) and "&dl=1" or "?dl=1")
+    end
+    -- imgur.com/xxx -> i.imgur.com/xxx.png
+    if not string.find(url, "i.imgur.com", 1, true) and string.find(url, "imgur.com", 1, true) then
+        local id = url:match("imgur%.com/([%w]+)")
+        if id then url = "https://i.imgur.com/" .. id .. ".png" end
+    end
+    return url
+end
+
+local function isVideoURL(url)
+    url = string.lower(url)
+    return string.find(url, ".webm", 1, true) or string.find(url, ".mp4", 1, true)
+end
 net.Receive("MedalGarage_Points", function()
     local n = net.ReadUInt(8)
     MedalGarage.StaffPoints = {}
@@ -51,9 +105,25 @@ function MedalGarage.OpenMenu()
     frame:SetAlpha(0)
     frame:AlphaTo(255, 0.12, 0)
 
-    local activeCat = (cfg.Categories or {"BLINDÉS"})[1]
+    local activeCat = dealerCategories()[1]
     local selected = nil            -- véhicule sélectionné (aperçu)
     local list, previewModel
+
+    -- Fond configurable in-game (lien Dropbox image ou vidéo), derrière les panels.
+    local bgURL = directMediaURL((MedalGarage.DealerData and MedalGarage.DealerData.settings or {}).background or "")
+    if bgURL ~= "" and string.StartWith(bgURL, "https://") then
+        local bg = vgui.Create("DHTML", frame)
+        bg:SetPos(0, 0)
+        bg:SetSize(fw, fh)
+        bg:SetMouseInputEnabled(false)
+        bg:SetZPos(-100)
+        local vol = tonumber((MedalGarage.DealerData and MedalGarage.DealerData.settings or {}).backgroundVolume) or 0
+        if isVideoURL(bgURL) then
+            bg:SetHTML([[<html><head><style>html,body{margin:0;overflow:hidden;background:#0c0e0b;}video{position:fixed;width:100%;height:100%;object-fit:cover;opacity:.35;filter:brightness(.6) saturate(.85);}</style></head><body><video autoplay loop ]] .. (vol <= 0 and "muted " or "") .. [[id="v"><source src="]] .. bgURL .. [["></video><script>var v=document.getElementById('v');v.volume=]] .. vol .. [[;v.play();</script></body></html>]])
+        else
+            bg:SetHTML([[<html><head><style>html,body{margin:0;overflow:hidden;background:#0c0e0b;}img{position:fixed;width:100%;height:100%;object-fit:cover;opacity:.35;filter:brightness(.6) saturate(.85);}</style></head><body><img src="]] .. bgURL .. [["></body></html>]])
+        end
+    end
 
     -- Colonnes : liste à gauche (dealer), grand aperçu à droite (William's style).
     local leftW = S(440)
@@ -76,10 +146,10 @@ function MedalGarage.OpenMenu()
         surface.DrawOutlinedRect(rightX, S(150), rightW, fh - S(180), 1)
     end
 
-    -- Onglets de catégorie.
+    -- Onglets de catégorie (dérivés de la liste configurée in-game).
     local tabY = S(104)
     local tabX = S(28)
-    for _, catName in ipairs(cfg.Categories or {}) do
+    for _, catName in ipairs(dealerCategories()) do
         local b = vgui.Create("DButton", frame)
         b:SetText("")
         surface.SetFont("MGarage_Tab")
@@ -135,7 +205,8 @@ function MedalGarage.OpenMenu()
         end
         draw.SimpleText(selected.name, "MGarage_Title", 0, 0, C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
         draw.SimpleText(selected.desc or "", "MGarage_Small", 0, S(38), Color(210, 214, 196, 190), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        draw.SimpleText("CATÉGORIE : " .. (selected.category or "") .. "     ESSENCE : " .. (selected.fuel or 100) .. "     NIVEAU REQUIS : " .. (selected.level or 1), "MGarage_Small", 0, S(60), C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        local hpTxt = (tonumber(selected.hp) or 0) > 0 and ("     HP : " .. selected.hp) or ""
+        draw.SimpleText("CATÉGORIE : " .. (selected.category or "") .. "     ESSENCE : " .. (selected.fuel or 100) .. hpTxt .. "     NIVEAU REQUIS : " .. (selected.level or 1), "MGarage_Small", 0, S(60), C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     end
 
     local spawnBtn = vgui.Create("DButton", frame)
@@ -169,7 +240,7 @@ function MedalGarage.OpenMenu()
         list:Clear()
         local myLevel = MedalGarage.GetLevel(LocalPlayer())
         local first
-        for _, veh in ipairs(cfg.Vehicles or {}) do
+        for _, veh in ipairs(dealerVehicles()) do
             if veh.category == activeCat then
                 first = first or veh
                 local unlocked = myLevel >= (tonumber(veh.level) or 1)
@@ -201,6 +272,29 @@ function MedalGarage.OpenMenu()
     end
     list.Rebuild()
 
+    frame.RefreshAll = function()
+        if list and list.Rebuild then list.Rebuild() end
+    end
+
+    -- Bouton CONFIG in-game (façon !wcd) pour le staff.
+    local lp = LocalPlayer()
+    local canConfig = lp:IsAdmin() or lp:IsSuperAdmin() or (cfg.AdminRanks or {})[lp:GetUserGroup()] == true
+    if canConfig then
+        local cfgBtn = vgui.Create("DButton", frame)
+        cfgBtn:SetText("")
+        cfgBtn:SetPos(fw - S(310), S(24))
+        cfgBtn:SetSize(S(136), S(38))
+        cfgBtn.Paint = function(self, w, h)
+            self.hoverAnim = Lerp(FrameTime() * 10, self.hoverAnim or 0, self:IsHovered() and 1 or 0)
+            draw.RoundedBox(0, 0, 0, w, h, Color(18, 21, 15, 200 + self.hoverAnim * 40))
+            draw.RoundedBox(0, 0, 0, S(3), h, C("Khaki"))
+            surface.SetDrawColor(214, 220, 196, 60)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            draw.SimpleText("CONFIG", "MGarage_Row", w / 2, h / 2, C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        cfgBtn.DoClick = function() MedalGarage.OpenAdminMenu() end
+    end
+
     local closeTop = vgui.Create("DButton", frame)
     closeTop:SetText("")
     closeTop:SetPos(fw - S(160), S(24))
@@ -219,6 +313,7 @@ function MedalGarage.OpenMenu()
 end
 
 concommand.Add(cfg.Command or "medal_garage", MedalGarage.OpenMenu)
+concommand.Add("medal_garage_config", function() MedalGarage.OpenAdminMenu() end)
 
 -- Ouverture depuis le PNJ vendeur.
 net.Receive("MedalGarage_OpenFromNPC", function()
@@ -415,3 +510,203 @@ hook.Add("PostDrawTranslucentRenderables", "MedalGarage_PointsPreview", function
         render.DrawWireframeSphere(p, (cfg.GaragePointRadius or 600), 12, 10, Color(112, 126, 74, 60), true)
     end
 end)
+
+-- =========================
+-- CONFIG IN-GAME façon WCD : tous les véhicules installés sont listés,
+-- le staff les active et règle niveau / HP / essence / catégorie.
+-- =========================
+MedalGarage.AdminRows = MedalGarage.AdminRows or {}
+
+net.Receive("MedalGarage_AdminList", function()
+    local len = net.ReadUInt(24)
+    if len <= 0 or len > 1048576 then return end
+    local rows = util.JSONToTable(util.Decompress(net.ReadData(len)) or "")
+    if istable(rows) then
+        MedalGarage.AdminRows = rows
+        if IsValid(MedalGarage.AdminFrame) and MedalGarage.AdminFrame.Rebuild then MedalGarage.AdminFrame.Rebuild() end
+    end
+end)
+
+local function sendAdminSet(row)
+    local data = util.Compress(util.TableToJSON(row))
+    net.Start("MedalGarage_AdminSet")
+        net.WriteUInt(#data, 24)
+        net.WriteData(data, #data)
+    net.SendToServer()
+end
+
+function MedalGarage.OpenAdminMenu()
+    if IsValid(MedalGarage.AdminFrame) then MedalGarage.AdminFrame:Remove(); return end
+    net.Start("MedalGarage_AdminList") net.SendToServer()
+
+    local frame = vgui.Create("DFrame")
+    MedalGarage.AdminFrame = frame
+    local fw, fh = S(1150), S(820)
+    frame:SetSize(fw, fh)
+    frame:Center()
+    frame:SetTitle("")
+    frame:ShowCloseButton(false)
+    frame:SetDraggable(false)
+    frame:MakePopup()
+
+    local search = ""
+    local onlyEnabled = false
+
+    frame.Paint = function(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, C("Panel"))
+        draw.RoundedBox(0, 0, 0, S(5), h, C("Khaki"))
+        surface.SetDrawColor(214, 220, 196, 60)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        draw.SimpleText("CONFIG DU GARAGE — VÉHICULES INSTALLÉS", "MGarage_Title", S(28), S(20), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        draw.SimpleText(#MedalGarage.AdminRows .. " véhicules détectés (Workshop). Active-les et règle niveau / HP / essence / catégorie. Sauvegarde par véhicule.", "MGarage_Small", S(29), S(58), C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    end
+
+    -- Barre de recherche + filtre.
+    local searchEntry = vgui.Create("DTextEntry", frame)
+    searchEntry:SetPos(S(28), S(84))
+    searchEntry:SetSize(S(380), S(32))
+    searchEntry:SetUpdateOnType(true)
+    searchEntry:SetPlaceholderText("Rechercher un véhicule…")
+    searchEntry.OnValueChange = function(self, v)
+        search = string.lower(tostring(v or ""))
+        if frame.Rebuild then frame.Rebuild() end
+    end
+
+    local filterBtn = vgui.Create("DButton", frame)
+    filterBtn:SetText("")
+    filterBtn:SetPos(S(420), S(84))
+    filterBtn:SetSize(S(190), S(32))
+    filterBtn.Paint = function(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, onlyEnabled and Color(112, 126, 74, 100) or Color(18, 21, 15, 200))
+        draw.RoundedBox(0, 0, 0, S(3), h, C("Olive"))
+        draw.SimpleText(onlyEnabled and "ACTIVÉS SEULEMENT ✓" or "TOUS LES VÉHICULES", "MGarage_Small", w / 2, h / 2, C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    filterBtn.DoClick = function() onlyEnabled = not onlyEnabled; frame.Rebuild() end
+
+    -- ===== Paramètres généraux : fond Dropbox du menu =====
+    local setLabel = vgui.Create("DPanel", frame)
+    setLabel:SetPos(fw - S(500), S(84))
+    setLabel:SetSize(S(472), S(32))
+    setLabel.Paint = function(self, w, h)
+        draw.SimpleText("FOND DU MENU (lien Dropbox/Imgur, image ou vidéo) :", "MGarage_Small", 0, h / 2, C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+    local bgEntry = vgui.Create("DTextEntry", frame)
+    bgEntry:SetPos(fw - S(500), S(118))
+    bgEntry:SetSize(S(360), S(30))
+    bgEntry:SetText((MedalGarage.DealerData and MedalGarage.DealerData.settings or {}).background or "")
+    local bgSave = vgui.Create("DButton", frame)
+    bgSave:SetText("")
+    bgSave:SetPos(fw - S(132), S(118))
+    bgSave:SetSize(S(104), S(30))
+    bgSave.Paint = function(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, Color(60, 74, 44, 230))
+        draw.SimpleText("APPLIQUER", "MGarage_Small", w / 2, h / 2, C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    bgSave.DoClick = function()
+        net.Start("MedalGarage_AdminSettings")
+            net.WriteString(bgEntry:GetValue() or "")
+            net.WriteFloat(0)
+        net.SendToServer()
+    end
+
+    local scroll = vgui.Create("DScrollPanel", frame)
+    scroll:SetPos(S(28), S(158))
+    scroll:SetSize(fw - S(56), fh - S(238))
+
+    local cats = {"BLINDÉS", "TRANSPORT", "AÉRIEN", "LOGISTIQUE", "AUTRE"}
+
+    function frame.Rebuild()
+        if not IsValid(scroll) then return end
+        scroll:Clear()
+        for _, row in ipairs(MedalGarage.AdminRows) do
+            local matchSearch = search == "" or string.find(string.lower(row.name or ""), search, 1, true) or string.find(string.lower(row.id or ""), search, 1, true)
+            if matchSearch and (not onlyEnabled or row.enabled) then
+                local pnl = vgui.Create("DPanel", scroll)
+                pnl:Dock(TOP)
+                pnl:DockMargin(0, 0, S(6), S(8))
+                pnl:SetTall(S(88))
+                pnl.Paint = function(self, w, h)
+                    draw.RoundedBox(0, 0, 0, w, h, Color(16, 19, 14, 200))
+                    draw.RoundedBox(0, 0, 0, S(4), h, row.enabled and C("Olive") or Color(70, 70, 70))
+                    surface.SetDrawColor(214, 220, 196, 30)
+                    surface.DrawOutlinedRect(0, 0, w, h, 1)
+                    draw.SimpleText(row.name or row.id, "MGarage_Row", S(52), S(10), row.enabled and C("White") or Color(160, 160, 160), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                    draw.SimpleText(row.id .. "  •  " .. (row.source or ""), "MGarage_Small", S(52), S(38), Color(180, 184, 166, 140), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                    draw.SimpleText("NIVEAU", "MGarage_Small", w - S(485), S(12), C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                    draw.SimpleText("HP (0=défaut)", "MGarage_Small", w - S(395), S(12), C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                    draw.SimpleText("ESSENCE", "MGarage_Small", w - S(285), S(12), C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                    draw.SimpleText("CATÉGORIE", "MGarage_Small", w - S(195), S(12), C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                end
+
+                -- Case activé/désactivé.
+                local enable = vgui.Create("DButton", pnl)
+                enable:SetText("")
+                enable:SetPos(S(10), S(28))
+                enable:SetSize(S(32), S(32))
+                enable.Paint = function(self, w, h)
+                    draw.RoundedBox(0, 0, 0, w, h, row.enabled and Color(112, 126, 74, 220) or Color(30, 33, 26, 220))
+                    surface.SetDrawColor(214, 220, 196, 90)
+                    surface.DrawOutlinedRect(0, 0, w, h, 1)
+                    if row.enabled then draw.SimpleText("✓", "MGarage_Row", w / 2, h / 2, C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER) end
+                end
+                enable.DoClick = function()
+                    row.enabled = not row.enabled
+                    sendAdminSet(row)
+                end
+
+                local function numField(x, key, w2)
+                    local e = vgui.Create("DTextEntry", pnl)
+                    e:SetPos(x, S(30))
+                    e:SetSize(w2 or S(70), S(28))
+                    e:SetNumeric(true)
+                    e:SetText(tostring(row[key] or 0))
+                    e.OnEnter = function(self)
+                        row[key] = tonumber(self:GetValue()) or row[key]
+                        sendAdminSet(row)
+                    end
+                    return e
+                end
+                pnl.PerformLayout = function(self, w, h)
+                    if pnl.built then return end
+                    pnl.built = true
+                    numField(w - S(485), "level")
+                    numField(w - S(395), "hp", S(90))
+                    numField(w - S(285), "fuel", S(70))
+
+                    local combo = vgui.Create("DComboBox", pnl)
+                    combo:SetPos(w - S(195), S(30))
+                    combo:SetSize(S(130), S(28))
+                    for _, c in ipairs(cats) do combo:AddChoice(c, c, c == row.category) end
+                    combo.OnSelect = function(_, _, val)
+                        row.category = val
+                        sendAdminSet(row)
+                    end
+
+                    local save = vgui.Create("DButton", pnl)
+                    save:SetText("")
+                    save:SetPos(w - S(56), S(28))
+                    save:SetSize(S(46), S(32))
+                    save.Paint = function(self, bw, bh)
+                        draw.RoundedBox(0, 0, 0, bw, bh, Color(60, 74, 44, 230))
+                        draw.SimpleText("OK", "MGarage_Row", bw / 2, bh / 2, C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    end
+                    save.DoClick = function() sendAdminSet(row) end
+                end
+            end
+        end
+    end
+    frame.Rebuild()
+
+    local close = vgui.Create("DButton", frame)
+    close:SetText("")
+    close:SetPos(fw - S(160), fh - S(60))
+    close:SetSize(S(136), S(40))
+    close.Paint = function(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, Color(18, 21, 15, 210))
+        draw.RoundedBox(0, 0, 0, S(3), h, C("Red"))
+        draw.SimpleText("FERMER", "MGarage_Row", w / 2, h / 2, C("White"), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    close.DoClick = function() frame:Remove() end
+
+    frame.OnKeyCodePressed = function(self, key) if key == KEY_ESCAPE then self:Remove() end end
+end

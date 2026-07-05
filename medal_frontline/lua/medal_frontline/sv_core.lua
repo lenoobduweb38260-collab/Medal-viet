@@ -76,6 +76,41 @@ local function isStaff(ply)
 end
 
 -- =========================
+-- Paramètres serveur (récompenses de capture, façon MG CTF) — modifiables in-game.
+-- =========================
+MedalFrontline.Settings = MedalFrontline.Settings or {captureXP = 50, captureMoney = 150}
+
+local function saveSettings()
+    file.CreateDir("medal_frontline")
+    file.Write("medal_frontline/settings.json", util.TableToJSON(MedalFrontline.Settings, true))
+end
+
+do
+    local raw = file.Read("medal_frontline/settings.json", "DATA")
+    if raw then
+        for k, v in pairs(util.JSONToTable(raw) or {}) do MedalFrontline.Settings[k] = v end
+    end
+end
+
+-- Récompense les joueurs du camp qui vient de capturer un secteur.
+local function rewardCapture(fac, zone)
+    local xp = tonumber(MedalFrontline.Settings.captureXP) or 0
+    local money = tonumber(MedalFrontline.Settings.captureMoney) or 0
+    if xp <= 0 and money <= 0 then return end
+    for _, ply in ipairs(player.GetHumans()) do
+        if armyOf(ply) == fac and ply:Alive() and ply:GetPos():Distance(zone.pos) <= (zone.radius or 900) then
+            if xp > 0 and MedalBarracks and MedalBarracks.AddGeneralXP then
+                MedalBarracks.AddGeneralXP(ply, xp, "capture de " .. zone.name)
+            end
+            if money > 0 and ply.addMoney then -- DarkRP
+                ply:addMoney(money)
+                ply:ChatPrint("[Frontline] +" .. money .. "$ pour la capture de " .. zone.name .. " !")
+            end
+        end
+    end
+end
+
+-- =========================
 -- Zones : config -> data/medal_frontline/<map>.json
 -- =========================
 local function dataPath()
@@ -130,6 +165,8 @@ local function syncAll(target)
         net.WriteFloat(round.endTime)
         net.WriteInt(math.Round(round.tickets[FAC1] or 0), 16)
         net.WriteInt(math.Round(round.tickets[FAC2] or 0), 16)
+        net.WriteInt(math.Round(tonumber(MedalFrontline.Settings.captureXP) or 0), 16)
+        net.WriteInt(math.Round(tonumber(MedalFrontline.Settings.captureMoney) or 0), 24)
         net.WriteUInt(#round.zones, 4)
         for _, z in ipairs(round.zones) do
             net.WriteString(z.name)
@@ -300,12 +337,14 @@ local function captureTick()
             if z.progress >= 100 and z.owner ~= FAC1 then
                 z.owner = FAC1
                 announce(facName(FAC1) .. " ont capturé " .. z.name .. " !")
+                rewardCapture(FAC1, z)
                 if round.mode == "offensive" and round.attacker == FAC1 then
                     round.endTime = round.endTime + (tonumber((cfg.Modes.offensive or {}).timePerCap) or 240)
                 end
             elseif z.progress <= -100 and z.owner ~= FAC2 then
                 z.owner = FAC2
                 announce(facName(FAC2) .. " ont capturé " .. z.name .. " !")
+                rewardCapture(FAC2, z)
                 if round.mode == "offensive" and round.attacker == FAC2 then
                     round.endTime = round.endTime + (tonumber((cfg.Modes.offensive or {}).timePerCap) or 240)
                 end
@@ -355,8 +394,14 @@ end)
 -- =========================
 -- Actions staff
 -- =========================
+local staffRate = {}
+local markerRate = {}
+hook.Add("PlayerDisconnected", "MedalFrontline_RateCleanup", function(ply) staffRate[ply] = nil; markerRate[ply] = nil end)
+
 net.Receive("MedalFrontline_Staff", function(_, ply)
     if not isStaff(ply) then ply:ChatPrint("[Frontline] Panneau réservé au staff."); return end
+    if (staffRate[ply] or 0) > CurTime() then return end
+    staffRate[ply] = CurTime() + 0.15
     local action = net.ReadString()
     local arg = net.ReadString()
 
@@ -406,6 +451,37 @@ net.Receive("MedalFrontline_Staff", function(_, ply)
             saveZones()
             ply:ChatPrint("[Frontline] Secteur supprimé.")
         end
+    elseif action == "renameidx" then
+        -- arg = "idx|nouveau nom"
+        local idx, name = string.match(arg, "^(%d+)|(.+)$")
+        idx = tonumber(idx)
+        if idx and round.zones[idx] and name then
+            round.zones[idx].name = string.upper(string.sub(string.Trim(name), 1, 28))
+            saveZones()
+        end
+    elseif action == "radiusidx" then
+        -- arg = "idx|rayon"
+        local idx, radius = string.match(arg, "^(%d+)|(%d+)$")
+        idx, radius = tonumber(idx), tonumber(radius)
+        if idx and round.zones[idx] and radius then
+            round.zones[idx].radius = math.Clamp(radius, 150, 4000)
+            saveZones()
+        end
+    elseif action == "goto" then
+        local idx = tonumber(arg)
+        if idx and round.zones[idx] then
+            ply:SetPos(round.zones[idx].pos + Vector(0, 0, 40))
+            ply:ChatPrint("[Frontline] Téléporté au secteur " .. round.zones[idx].name .. ".")
+        end
+    elseif action == "rewards" then
+        -- arg = "xp|argent"
+        local xp, money = string.match(arg, "^(%d+)|(%d+)$")
+        if xp and money then
+            MedalFrontline.Settings.captureXP = math.Clamp(tonumber(xp) or 0, 0, 100000)
+            MedalFrontline.Settings.captureMoney = math.Clamp(tonumber(money) or 0, 0, 10000000)
+            saveSettings()
+            ply:ChatPrint("[Frontline] Récompenses de capture sauvegardées.")
+        end
     end
     syncAll()
 end)
@@ -417,6 +493,8 @@ util.AddNetworkString("MedalFrontline_ZoneTool")
 
 net.Receive("MedalFrontline_ZoneTool", function(_, ply)
     if not isStaff(ply) then ply:ChatPrint("[Frontline] Outil réservé au staff."); return end
+    if (staffRate[ply] or 0) > CurTime() then return end
+    staffRate[ply] = CurTime() + 0.15
     local action = net.ReadString()
 
     if action == "add" then
@@ -536,6 +614,8 @@ MedalFrontline.SendMarkers = sendMarkers
 
 net.Receive("MedalFrontline_MarkerAction", function(_, ply)
     local mapCfg = cfg.Map or {}
+    if (markerRate[ply] or 0) > CurTime() then return end
+    markerRate[ply] = CurTime() + 0.2
     if not isLeader(ply) then ply:ChatPrint("[Carte] Réservé aux chefs d'escouade et au commandement."); return end
     local fac = armyOf(ply)
     if fac == "" then return end
@@ -575,4 +655,27 @@ timer.Create("MedalFrontline_MarkersRefresh", 8, 0, function()
     for _, ply in ipairs(player.GetHumans()) do
         if isLeader(ply) then sendMarkers(armyOf(ply), ply) end
     end
+end)
+
+-- =========================
+-- Commande chat "!frontline" (alias "/frontline") : panneau staff.
+-- =========================
+local chatRate = {}
+hook.Add("PlayerDisconnected", "MedalFrontline_ChatRateCleanup", function(ply) chatRate[ply] = nil end)
+
+hook.Add("PlayerSay", "MedalFrontline_ChatCommands", function(ply, text)
+    if not IsValid(ply) then return end
+    local said = string.lower(string.Trim(tostring(text or "")))
+    local prefix = string.sub(said, 1, 1)
+    if prefix ~= "!" and prefix ~= "/" then return end
+    if string.sub(said, 2) ~= "frontline" then return end
+
+    if (chatRate[ply] or 0) > CurTime() then return "" end
+    chatRate[ply] = CurTime() + 0.5
+    if not isStaff(ply) then
+        ply:ChatPrint("[Frontline] Commande réservée au staff.")
+        return ""
+    end
+    ply:ConCommand(tostring(cfg.StaffCommand or "medal_frontline_staff"))
+    return ""
 end)

@@ -218,6 +218,7 @@ local function invitePlayer(ply, target)
 end
 
 net.Receive("MedalSquads_Action", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "squads", 0.3) then return end
     if squadCfg().Enabled == false then return end
     local action = net.ReadString()
     local arg = net.ReadString()

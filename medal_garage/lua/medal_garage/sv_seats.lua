@@ -101,6 +101,7 @@ local function switchSeat(ply)
 end
 
 net.Receive("MedalGarage_SwitchSeat", function(_, ply)
+    if MedalGarage.RateOK and not MedalGarage.RateOK(ply, "seat", 0.25) then return end
     switchSeat(ply)
 end)
 

@@ -288,7 +288,7 @@ cfg.Squads = {
     MaxMembers = 6,
     Names = {"ABLE", "BAKER", "CHARLIE", "DOG", "EASY", "FOX", "GEORGE", "HOW", "ITEM", "JIG", "KING", "LOVE"},
     -- Le chat SL : commandant, chefs d'escouade et radiomen (selon règles radio).
-    SLChatCommand = "/sl",
+    SLChatCommand = "!sl", -- "/sl" fonctionne aussi (alias)
     LeaderIcon = "★",
     HUD = {
         Enabled = true,
@@ -333,8 +333,8 @@ cfg.Radio = {
     TuneTime = 1.4,              -- durée de l'animation de recherche de fréquence
 
     -- Commandes chat.
-    RadioChatCommand = "/radio", -- radioman -> réseau radio (ou SL si sa radio est sur la fréquence SL)
-    -- Le canal SL utilise cfg.Squads.SLChatCommand (/sl).
+    RadioChatCommand = "!radio", -- radioman -> réseau radio (ou SL si sa radio est sur la fréquence SL). "/radio" = alias.
+    -- Le canal SL utilise cfg.Squads.SLChatCommand (!sl).
 
     -- Rôles considérés comme radioman (id du Role dans cfg.Armies).
     RadiomanRoleIDs = {"radioman"},
@@ -682,7 +682,7 @@ cfg.Relations = {
     Enabled = true,
     SQLTable = "medal_barracks_relations",
     UnknownName = "Inconnu",
-    PresentCommand = "/presenter",
+    PresentCommand = "!presenter", -- "/presenter" fonctionne aussi (alias)
     PresentConsoleCommand = "medal_present",
     PresentDistance = 150,
 

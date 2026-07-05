@@ -26,6 +26,14 @@ local COL_WHITE = Color(232, 234, 222)
 local FAC1 = (cfg.Factions or {})[1] or "americans"
 local FAC2 = (cfg.Factions or {})[2] or "vietcong"
 
+local function facColor(fac)
+    return (cfg.FactionColors or {})[fac] or COL_NEUTRAL
+end
+
+local function facName(fac)
+    return (cfg.FactionNames or {})[fac] or string.upper(tostring(fac))
+end
+
 -- État synchronisé par le serveur.
 MedalFrontline.State = MedalFrontline.State or {mode = "warfare", active = false, attacker = FAC1, zones = {}, tickets = {}, endTime = 0}
 local state = MedalFrontline.State
@@ -40,6 +48,8 @@ net.Receive("MedalFrontline_Sync", function()
     state.attacker = net.ReadString()
     state.endTime = net.ReadFloat()
     state.tickets = {[FAC1] = net.ReadInt(16), [FAC2] = net.ReadInt(16)}
+    state.captureXP = net.ReadInt(16)
+    state.captureMoney = net.ReadInt(24)
     local count = net.ReadUInt(4)
     state.zones = {}
     for i = 1, count do
@@ -94,14 +104,6 @@ hook.Add("HUDPaint", "MedalFrontline_CaptureBanner", function()
     draw.SimpleText(string.upper(b.zone or "") .. " CAPTURÉ", "MFront_Count", ScrW() / 2, cy + size / 2 + S(10), Color(240, 242, 232, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
     draw.SimpleText(facName(b.fac), "MFront_Zone", ScrW() / 2, cy + size / 2 + S(34), Color(facColor(b.fac).r, facColor(b.fac).g, facColor(b.fac).b, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
 end)
-
-local function facColor(fac)
-    return (cfg.FactionColors or {})[fac] or COL_NEUTRAL
-end
-
-local function facName(fac)
-    return (cfg.FactionNames or {})[fac] or string.upper(tostring(fac))
-end
 
 -- Segment en ruban incliné façon HLL.
 local function drawSegment(x, y, w, h, skew, col, alpha)

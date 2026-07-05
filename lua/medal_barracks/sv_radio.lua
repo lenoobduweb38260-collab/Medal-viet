@@ -91,6 +91,7 @@ MedalBarracks.GetOwnedRadio = ownedRadio
 -- Pose de la radio (validée serveur, jauge côté client)
 -- =========================
 net.Receive("MedalRadio_Place", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "radio", 0.4) then return end
     local rc = radioCfg()
     if rc.Enabled == false then return end
     if not isRadioman(ply) then ply:ChatPrint("[Radio] Seul un radioman peut déployer une radio."); return end
@@ -134,6 +135,7 @@ net.Receive("MedalRadio_Place", function(_, ply)
 end)
 
 net.Receive("MedalRadio_SetFreq", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "radio", 0.3) then return end
     local ent = net.ReadEntity()
     local freqID = net.ReadString()
     if not IsValid(ent) or ent:GetClass() ~= "medal_radio_ent" then return end
@@ -153,6 +155,7 @@ net.Receive("MedalRadio_SetFreq", function(_, ply)
 end)
 
 net.Receive("MedalRadio_Remove", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "radio", 0.4) then return end
     local ent = net.ReadEntity()
     if not IsValid(ent) or ent:GetClass() ~= "medal_radio_ent" then return end
     if ent:GetNWString("MedalRadio_Owner", "") ~= ply:SteamID64() then ply:ChatPrint("[Radio] Ce n'est pas ta radio."); return end
@@ -197,6 +200,7 @@ end
 
 -- Le bouton DÉCROCHER/RACCROCHER du menu de la radio.
 net.Receive("MedalRadio_Handset", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "handset", 0.2) then return end
     local ent = net.ReadEntity()
     if not IsValid(ent) or ent:GetClass() ~= "medal_radio_ent" then return end
     if ent:GetPos():Distance(ply:GetPos()) > 200 then return end
@@ -315,10 +319,14 @@ end
 hook.Add("PlayerSay", "MedalRadio_ChatChannels", function(ply, text)
     if radioCfg().Enabled == false then return end
     text = tostring(text or "")
+    -- Préfixe principal "!", alias "/" accepté.
+    if string.sub(text, 1, 1) == "/" then text = "!" .. string.sub(text, 2) end
     local lower = string.lower(text)
 
-    local slCmd = string.lower(tostring((cfg.Squads and cfg.Squads.SLChatCommand) or "/sl"))
-    local radioCmd = string.lower(tostring(radioCfg().RadioChatCommand or "/radio"))
+    local slCmd = string.lower(tostring((cfg.Squads and cfg.Squads.SLChatCommand) or "!sl"))
+    local radioCmd = string.lower(tostring(radioCfg().RadioChatCommand or "!radio"))
+    if string.sub(slCmd, 1, 1) == "/" then slCmd = "!" .. string.sub(slCmd, 2) end
+    if string.sub(radioCmd, 1, 1) == "/" then radioCmd = "!" .. string.sub(radioCmd, 2) end
 
     -- Canal COMMANDEMENT : /sl <message>
     if string.sub(lower, 1, #slCmd + 1) == slCmd .. " " then

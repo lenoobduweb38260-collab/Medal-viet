@@ -205,12 +205,14 @@ end
 
 net.Receive("MedalMusic_Request", function(_, ply)
     if not isMusicStaff(ply) then return end
+    if not MedalBarracks.NetRateOK(ply, "music", 0.5) then return end
     local force = net.ReadBool()
     if force then refreshMusicList() end
     sendListTo(ply)
 end)
 
 net.Receive("MedalMusic_Play", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "music", 0.5) then return end
     if not isMusicStaff(ply) then ply:ChatPrint("[Musique] Réservé au staff."); return end
     local index = net.ReadUInt(10)
     local volume = net.ReadFloat()
@@ -219,6 +221,7 @@ end)
 
 net.Receive("MedalMusic_Stop", function(_, ply)
     if not isMusicStaff(ply) then return end
+    if not MedalBarracks.NetRateOK(ply, "music", 0.5) then return end
     MedalBarracks.MusicPlaying = nil
     net.Start("MedalMusic_StopClient")
     net.Broadcast()

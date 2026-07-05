@@ -13,6 +13,7 @@ if SERVER then
 
     include("medal_garage/sh_config.lua")
     include("medal_garage/sv_core.lua")
+    include("medal_garage/sv_admin.lua")
     include("medal_garage/sv_seats.lua")
 else
     include("medal_garage/sh_config.lua")

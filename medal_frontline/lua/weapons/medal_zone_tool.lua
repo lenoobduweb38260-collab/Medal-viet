@@ -130,23 +130,26 @@ if CLIENT then
         if IsValid(MedalFrontline.RenameFrame) then MedalFrontline.RenameFrame:Remove() end
         local pos = ply:GetEyeTrace().HitPos
 
+        -- Responsive : mise à l'échelle par rapport à un écran 1920x1080.
+        local function S(v) return math.Round(v * math.min(ScrW() / 1920, ScrH() / 1080)) end
+
         local f = vgui.Create("DFrame")
         MedalFrontline.RenameFrame = f
-        f:SetSize(360, 120)
+        f:SetSize(S(420), S(150))
         f:Center()
         f:SetTitle("")
         f:ShowCloseButton(false)
         f:MakePopup()
         f.Paint = function(self, w, h)
             draw.RoundedBox(0, 0, 0, w, h, Color(12, 14, 11, 245))
-            draw.RoundedBox(0, 0, 0, 4, h, Color(112, 126, 74))
+            draw.RoundedBox(0, 0, 0, S(4), h, Color(112, 126, 74))
             surface.SetDrawColor(214, 220, 196, 60)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
-            draw.SimpleText("NOM DU SECTEUR VISÉ", "MZoneTool_Sub", 16, 12, Color(232, 234, 222), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            draw.SimpleText("NOM DU SECTEUR VISÉ", "MZoneTool_Sub", S(18), S(14), Color(232, 234, 222), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
         end
         local entry = vgui.Create("DTextEntry", f)
-        entry:SetPos(16, 48)
-        entry:SetSize(328, 30)
+        entry:SetPos(S(18), S(56))
+        entry:SetSize(f:GetWide() - S(36), S(36))
         entry:SetFont("DermaLarge")
         entry:RequestFocus()
         entry.OnEnter = function(self)
@@ -159,8 +162,8 @@ if CLIENT then
         end
         local ok = vgui.Create("DButton", f)
         ok:SetText("")
-        ok:SetPos(16, 84)
-        ok:SetSize(328, 26)
+        ok:SetPos(S(18), S(102))
+        ok:SetSize(f:GetWide() - S(36), S(32))
         ok.Paint = function(self, w, h)
             draw.RoundedBox(0, 0, 0, w, h, Color(60, 74, 44, 230))
             draw.SimpleText("RENOMMER (ENTRÉE)", "MZoneTool_Sub", w / 2, h / 2, Color(240, 242, 232), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)

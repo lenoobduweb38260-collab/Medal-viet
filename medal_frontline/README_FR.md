@@ -16,12 +16,15 @@ Copie le dossier `medal_frontline/` dans `garrysmod/addons/`.
 - **ESCARMOUCHE** : un unique point central ; le tenir rapporte des tickets,
   premier camp au quota gagne.
 
-## Panneau staff
-Commande : `medal_frontline_staff` (admin).
-- Choix du mode, du camp attaquant, LANCER / ARRÊTER / RÉINITIALISER.
-- **Définition des secteurs en jeu** : place-toi au centre du secteur et clique
-  « DÉFINIR ICI » — sauvegarde automatique par map dans `data/medal_frontline/`.
-- Rappel des joueurs actifs par camp.
+## Panneau staff (façon MG CTF, en onglets)
+Commande : `!frontline` en chat (ou console `medal_frontline_staff`, admin).
+- **OPÉRATION** : choix du mode, du camp attaquant, LANCER / ARRÊTER /
+  RÉINITIALISER, rappel des joueurs actifs par camp.
+- **SECTEURS** : renommer (champ + Entrée), rayon au slider, TP vers le
+  secteur, « DÉFINIR ICI » (place-toi au centre), supprimer, ajouter —
+  sauvegarde automatique par map dans `data/medal_frontline/`.
+- **RÉCOMPENSES** : XP + argent DarkRP donnés aux joueurs présents dans la
+  zone au moment de la capture (sauvegardés dans `settings.json`).
 
 ## HUD
 - Barre de secteurs HLL en haut : segments ruban, cadenas (verrouillé),

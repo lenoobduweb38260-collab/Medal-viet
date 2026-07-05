@@ -1082,11 +1082,25 @@ function MedalBarracks.SelectLoadout(ply, armyID, categoryID, roleID, loadoutID)
     return true, armyName .. " / " .. (role.name or roleID) .. " / " .. (loadout.name or loadout.id) .. " sélectionné."
 end
 
+
+-- Anti-spam net : delai minimal par joueur et par canal.
+local netRate = {}
+function MedalBarracks.NetRateOK(ply, key, delay)
+    if not IsValid(ply) then return false end
+    netRate[ply] = netRate[ply] or {}
+    if (netRate[ply][key] or 0) > CurTime() then return false end
+    netRate[ply][key] = CurTime() + (delay or 0.3)
+    return true
+end
+hook.Add("PlayerDisconnected", "MedalBarracks_NetRateCleanup", function(ply) netRate[ply] = nil end)
+
 net.Receive("MedalBarracks_RequestCharacters", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "reqchars", 1) then return end
     MedalBarracks.LoadCharacters(ply)
 end)
 
 net.Receive("MedalBarracks_CreateCharacter", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "charwrite", 1) then return end
     local cc = charCfg()
     local armyID = net.ReadString()
     local data = {
@@ -1104,6 +1118,7 @@ net.Receive("MedalBarracks_CreateCharacter", function(_, ply)
 end)
 
 net.Receive("MedalBarracks_UpdateCharacter", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "charwrite", 1) then return end
     local cc = charCfg()
     local armyID = net.ReadString()
     local data = {
@@ -1119,6 +1134,7 @@ net.Receive("MedalBarracks_UpdateCharacter", function(_, ply)
 end)
 
 net.Receive("MedalBarracks_SelectCamp", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "select", 0.5) then return end
     local armyID = net.ReadString()
     local ok, msg, selectedArmyID = MedalBarracks.SelectCamp(ply, armyID)
     notifyCamp(ply, ok, msg, selectedArmyID or armyID)
@@ -1131,6 +1147,7 @@ net.Receive("MedalBarracks_SelectCamp", function(_, ply)
 end)
 
 net.Receive("MedalBarracks_Select", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "select", 0.5) then return end
     local armyID = net.ReadString()
     local categoryID = net.ReadString()
     local roleID = net.ReadString()
@@ -1341,10 +1358,12 @@ concommand.Add("medal_xp_reset", function(ply, _, args)
 end)
 
 net.Receive("MedalBarracks_StaffRequestCharacters", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "staff", 0.3) then return end
     MedalBarracks.SendStaffCharacters(ply)
 end)
 
 net.Receive("MedalBarracks_StaffDeleteCharacter", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "staff", 0.3) then return end
     local sid64 = net.ReadString()
     local armyID = net.ReadString()
     local ok, msg = MedalBarracks.StaffDeleteCharacter(ply, sid64, armyID)
@@ -1352,6 +1371,7 @@ net.Receive("MedalBarracks_StaffDeleteCharacter", function(_, ply)
 end)
 
 net.Receive("MedalBarracks_StaffSaveCharacter", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "staff", 0.3) then return end
     local data = {
         steamid64 = net.ReadString(),
         army = net.ReadString(),
@@ -1500,8 +1520,11 @@ concommand.Add((cfg.Relations and cfg.Relations.PresentConsoleCommand) or "medal
 end)
 
 hook.Add("PlayerSay", "MedalBarracks_PresentCommand", function(ply, text)
-    local cmd = string.lower(tostring((relCfg().PresentCommand or "/presenter")))
-    if string.lower(string.Trim(tostring(text or ""))) == cmd then
+    local cmd = string.lower(tostring((relCfg().PresentCommand or "!presenter")))
+    if string.sub(cmd, 1, 1) == "/" then cmd = "!" .. string.sub(cmd, 2) end
+    local said = string.lower(string.Trim(tostring(text or "")))
+    if string.sub(said, 1, 1) == "/" then said = "!" .. string.sub(said, 2) end
+    if said == cmd then
         MedalBarracks.PresentCharacter(ply)
         return ""
     end
@@ -1514,6 +1537,7 @@ end)
 util.AddNetworkString("MedalBarracks_DeleteCharacter")
 
 net.Receive("MedalBarracks_DeleteCharacter", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "charwrite", 1) then return end
     local armyID = net.ReadString()
     local army = MedalBarracks.GetArmy(armyID)
     if not army then return end

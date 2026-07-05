@@ -1,4 +1,44 @@
-# Medal Barracks Menu Vietnam — v21 Outils Frontline, carte tactique & Medal Garage
+# Medal Barracks Menu Vietnam — v24 Config in-game WCD, éditeur MG CTF, commandes !, sécurité
+
+## v24 — Garage façon WCD, panneau Frontline façon MG CTF, commandes !, sécurité
+
+### Commandes chat en `!` (catalogue : `COMMANDES_STAFF.md`)
+- **Toutes les commandes chat passent en `!`** (`!menu`, `!caserne`, `!escouades`,
+  `!presenter`, `!garage`, `!sl`, `!radio`, `!aide`) — l'ancien préfixe `/` reste
+  accepté partout en alias.
+- Staff : `!staffmenu`, `!musique`, `!frontline`, `!garageconfig`.
+- **`COMMANDES_STAFF.md`** à la racine : catalogue complet (chat, console, SWEPs,
+  touches, panneaux staff) à distribuer au staff du serveur.
+
+### Medal Garage — config in-game façon William's Car Dealer
+- **Découverte automatique de TOUS les véhicules installés** : Source,
+  simfphys, LFS, WAC, SCars, Glide et bases scriptées connues.
+- Panel **CONFIG** (bouton dans le garage, `!garageconfig`) : activer/désactiver
+  chaque véhicule, nom, **niveau requis, HP, essence, catégorie** — sauvegarde
+  JSON serveur, appliquée en direct au menu joueur.
+- **Fond du menu configurable in-game** : lien Dropbox/Imgur (image OU vidéo)
+  affiché derrière les panels du garage.
+- Les HP configurés sont appliqués au véhicule au spawn (SetMaxHealth/simfphys).
+
+### Medal Frontline — panneau staff façon Modern Faction Wars CTF (sans drapeaux)
+- Panneau `!frontline` réécrit en **onglets** : **OPÉRATION** (mode Warfare /
+  Offensive / Escarmouche, camp attaquant, LANCER/ARRÊTER/RÉINITIALISER),
+  **SECTEURS** (renommer, rayon au slider, TP, « définir ici », supprimer,
+  ajouter) et **RÉCOMPENSES**.
+- **Récompenses de capture façon MG CTF** : XP + argent DarkRP distribués aux
+  joueurs présents dans la zone à la capture, montants réglables in-game et
+  sauvegardés (`data/medal_frontline/settings.json`).
+
+### Sécurité & responsive (les 3 addons)
+- **Anti-spam réseau** par joueur et par canal sur tous les receveurs
+  (personnages, escouades, radio, ravitaillement, musique, staff, zones,
+  marqueurs, garage, sièges) : 0,15 s à 1 s selon l'action.
+- Tous les receveurs valident rang/rôle/faction/distance et **clampent** les
+  valeurs (niveaux, HP, essence, rayons, longueurs de texte).
+- UI passées au **scaling résolution** (helper `S()` sur base 1920×1080),
+  y compris le dialogue de renommage de l'outil de secteur.
+
+---
 
 ## v21 — SWEP secteurs, carte tactique SL/Commandant, ordre de capture, Medal Garage
 

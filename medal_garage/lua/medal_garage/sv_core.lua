@@ -91,6 +91,12 @@ MedalGarage.NearestGarage = nearestGarage
 -- Spawn de véhicule
 -- =========================
 local function findVehicleDef(name)
+    -- Liste dynamique (config in-game façon WCD), fallback catalogue statique.
+    if MedalGarage.GetDealerList then
+        for _, v in ipairs(MedalGarage.GetDealerList()) do
+            if v.id == name or v.name == name then return v end
+        end
+    end
     for _, v in ipairs(cfg.Vehicles or {}) do
         if v.name == name then return v end
     end
@@ -105,6 +111,7 @@ local function countPlayerVehicles(ply)
 end
 
 net.Receive("MedalGarage_Spawn", function(_, ply)
+    if MedalGarage.RateOK and not MedalGarage.RateOK(ply, "spawn", 0.5) then return end
     if not canOpenGarage(ply) then ply:ChatPrint("[Garage] Accès réservé aux équipages."); return end
     local name = net.ReadString()
     local def = findVehicleDef(name)
@@ -152,17 +159,36 @@ net.Receive("MedalGarage_Spawn", function(_, ply)
         spawnAng = Angle(0, ply:EyeAngles().y - 90, 0)
     end
 
-    local veh = ents.Create(def.class)
-    if not IsValid(veh) then ply:ChatPrint("[Garage] Classe de véhicule invalide : " .. tostring(def.class)); return end
-    veh:SetPos(spawnPos)
-    veh:SetAngles(spawnAng)
-    if def.model and def.model ~= "" then veh:SetModel(def.model) end
-    -- KeyValue standard des véhicules jeep GMod ; ignoré par les autres bases.
-    if def.class == "prop_vehicle_jeep" then
-        veh:SetKeyValue("vehiclescript", "scripts/vehicles/jeep_test.txt")
+    local veh
+    if def.simfphys and simfphys and simfphys.SpawnVehicleSimple then
+        -- Véhicule simfphys : API dédiée.
+        veh = simfphys.SpawnVehicleSimple(def.simfphys, spawnPos, spawnAng)
+    else
+        veh = ents.Create(def.class)
+        if not IsValid(veh) then ply:ChatPrint("[Garage] Classe de véhicule invalide : " .. tostring(def.class)); return end
+        veh:SetPos(spawnPos)
+        veh:SetAngles(spawnAng)
+        if def.model and def.model ~= "" then veh:SetModel(def.model) end
+        -- Script véhicule des jeeps Source (packs Workshop type prop_vehicle_jeep).
+        if def.class == "prop_vehicle_jeep" or def.class == "prop_vehicle_airboat" then
+            veh:SetKeyValue("vehiclescript", (def.script and def.script ~= "") and def.script or "scripts/vehicles/jeep_test.txt")
+        end
+        veh:Spawn()
+        veh:Activate()
     end
-    veh:Spawn()
-    veh:Activate()
+    if not IsValid(veh) then ply:ChatPrint("[Garage] Impossible de créer ce véhicule."); return end
+
+    -- Système d'HP configurable (0 = HP d'origine du véhicule).
+    local hp = tonumber(def.hp) or 0
+    if hp > 0 then
+        veh:SetMaxHealth(hp)
+        veh:SetHealth(hp)
+        -- simfphys / LFS gèrent leur propre vie : on la règle aussi si l'API existe.
+        if veh.SetCurHealth then pcall(function() veh:SetCurHealth(hp) end) end
+        if veh.SetMaxHealth2 then pcall(function() veh:SetMaxHealth2(hp) end) end
+        if veh.SetHP then pcall(function() veh:SetHP(hp) end) end
+    end
+    veh:SetNWString("MedalVehName", def.name or "")
 
     -- DarkRP : marque le propriétaire pour la protection/nettoyage.
     if veh.CPPISetOwner then veh:CPPISetOwner(ply) end
@@ -181,6 +207,9 @@ net.Receive("MedalGarage_Spawn", function(_, ply)
 end)
 
 net.Receive("MedalGarage_Open", function(_, ply)
+    if MedalGarage.RateOK and not MedalGarage.RateOK(ply, "open", 0.8) then return end
+    -- Liste des véhicules (config in-game) + paramètres (fond Dropbox).
+    if MedalGarage.SendDealerList then MedalGarage.SendDealerList(ply) end
     -- Envoi des points (pour l'aperçu) au staff seulement.
     if isStaff(ply) then
         net.Start("MedalGarage_Points")
@@ -192,6 +221,7 @@ end)
 
 net.Receive("MedalGarage_PointAction", function(_, ply)
     if not isStaff(ply) then return end
+    if MedalGarage.RateOK and not MedalGarage.RateOK(ply, "points", 0.3) then return end
     local action = net.ReadString()
     if action == "add" then
         table.insert(MedalGarage.Points, ply:GetPos())
@@ -321,6 +351,7 @@ end)
 
 -- Ravitaillement en essence (maintien de E sur le véhicule près d'un garage).
 net.Receive("MedalGarage_Refuel", function(_, ply)
+    if MedalGarage.RateOK and not MedalGarage.RateOK(ply, "refuel", 0.2) then return end
     local fc = cfg.Fuel or {}
     if fc.Enabled == false then return end
     local veh = net.ReadEntity()

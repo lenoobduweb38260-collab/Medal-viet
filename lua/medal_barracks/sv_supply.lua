@@ -49,6 +49,7 @@ end
 -- Pose de la caisse
 -- =========================
 net.Receive("MedalSupply_Place", function(_, ply)
+    if not MedalBarracks.NetRateOK(ply, "supply", 0.4) then return end
     local sc = supplyCfg()
     if sc.Enabled == false then return end
     if not isSupport(ply) then ply:ChatPrint("[Ravitaillement] Seul un Soutien peut poser une caisse."); return end

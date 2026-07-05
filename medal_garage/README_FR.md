@@ -11,7 +11,12 @@ Copie `medal_garage/` dans `garrysmod/addons/`.
 Menu façon **William's Car Dealer** : liste des véhicules à gauche, grand
 aperçu 3D rotatif à droite avec fiche et bouton **SORTIR CE VÉHICULE**.
 
-- Ouvre avec **F4** (`cfg.OpenKey`) ou la commande `medal_garage`.
+- Ouvre avec **F4** (`cfg.OpenKey`), `!garage` en chat ou la commande `medal_garage`.
+- **CONFIG IN-GAME façon WCD** (`!garageconfig`, staff) : tous les véhicules
+  Workshop installés (Source, simfphys, LFS, WAC, SCars, Glide) sont détectés
+  automatiquement ; active/désactive chacun, règle nom, niveau, HP, essence,
+  catégorie. Fond du menu (lien Dropbox/Imgur image ou vidéo) configurable au
+  même endroit. Sauvegarde JSON dans `data/medal_garage/`.
 - Menu façon HLL : onglets par catégorie, véhicules **débloqués par niveau**
   (verrouillés + cadenas sinon), restrictions de rôle possibles.
 - **Compatible n'importe quel véhicule Workshop** : chaque entrée se spawn par
