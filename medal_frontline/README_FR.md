@@ -53,3 +53,9 @@ Tout s'adapte automatiquement au nombre de secteurs créés.
 Chaque secteur porte un **mât avec un drapeau** coloré par camp ; pendant une
 capture, le drapeau monte/descend selon la progression (comme un drapeau CTF
 qu'on hisse), et devient blanc quand le point est contesté.
+
+## Logos de faction (Imgur) & renommage
+- `cfg.FactionLogos` : colle des liens **Imgur** ; l'addon télécharge et met en
+  cache les images, les affiche **au centre de l'écran** lors d'une capture
+  (bandeau `cfg.CaptureBanner`) et **sur les drapeaux** en jeu.
+- Renomme un secteur : prends l'outil de secteur, vise-le et appuie sur **F**.

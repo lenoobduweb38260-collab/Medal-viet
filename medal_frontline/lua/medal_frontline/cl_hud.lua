@@ -30,6 +30,10 @@ local FAC2 = (cfg.Factions or {})[2] or "vietcong"
 MedalFrontline.State = MedalFrontline.State or {mode = "warfare", active = false, attacker = FAC1, zones = {}, tickets = {}, endTime = 0}
 local state = MedalFrontline.State
 
+-- Bandeau central de capture (logo du camp qui vient de prendre un point).
+MedalFrontline.Banner = MedalFrontline.Banner or {until_ = 0, fac = "", zone = ""}
+local prevOwners = {}
+
 net.Receive("MedalFrontline_Sync", function()
     state.mode = net.ReadString()
     state.active = net.ReadBool()
@@ -49,8 +53,46 @@ net.Receive("MedalFrontline_Sync", function()
             radius = net.ReadFloat(),
         }
     end
+
+    -- Détection de changement de propriétaire -> bandeau central avec logo.
+    local bc = cfg.CaptureBanner or {}
+    for _, z in ipairs(state.zones) do
+        local key = z.name
+        if prevOwners[key] ~= nil and prevOwners[key] ~= z.owner and z.owner ~= "" then
+            if bc.Enabled ~= false then
+                MedalFrontline.Banner = {until_ = SysTime() + (tonumber(bc.Duration) or 4), fac = z.owner, zone = z.name}
+            end
+        end
+        prevOwners[key] = z.owner
+    end
+
     MedalFrontline.State = state
     if IsValid(MedalFrontline.StaffFrame) and MedalFrontline.StaffFrame.Rebuild then MedalFrontline.StaffFrame:Rebuild() end
+end)
+
+-- Bandeau central : logo Imgur du camp + nom du secteur capturé.
+hook.Add("HUDPaint", "MedalFrontline_CaptureBanner", function()
+    local b = MedalFrontline.Banner
+    if not b or b.until_ < SysTime() then return end
+    local bc = cfg.CaptureBanner or {}
+    local a = math.Clamp((b.until_ - SysTime()) / 0.6, 0, 1) * 255
+    local cy = ScrH() * (tonumber(bc.Y) or 0.30)
+
+    local logoURL = (cfg.FactionLogos or {})[b.fac] or ""
+    local mat = logoURL ~= "" and MedalFrontline.GetImgur and MedalFrontline.GetImgur(logoURL) or nil
+    local size = S(tonumber(bc.LogoSize) or 150)
+    if mat then
+        surface.SetDrawColor(255, 255, 255, a)
+        surface.SetMaterial(mat)
+        surface.DrawTexturedRect(ScrW() / 2 - size / 2, cy - size / 2, size, size)
+    else
+        -- Repli : pastille couleur du camp.
+        draw.NoTexture()
+        surface.SetDrawColor(facColor(b.fac).r, facColor(b.fac).g, facColor(b.fac).b, a)
+        surface.DrawRect(ScrW() / 2 - size / 2, cy - size / 2, size, size)
+    end
+    draw.SimpleText(string.upper(b.zone or "") .. " CAPTURÉ", "MFront_Count", ScrW() / 2, cy + size / 2 + S(10), Color(240, 242, 232, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    draw.SimpleText(facName(b.fac), "MFront_Zone", ScrW() / 2, cy + size / 2 + S(34), Color(facColor(b.fac).r, facColor(b.fac).g, facColor(b.fac).b, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
 end)
 
 local function facColor(fac)
@@ -263,10 +305,18 @@ hook.Add("PostDrawTranslucentRenderables", "MedalFrontline_Flags", function(dept
             local p3 = flagBottom + right * flagW + Vector(0, 0, wave)
             local p4 = flagBottom
 
-            render.SetColorMaterialIgnoreZ()
             local col = z.contested and Color(235, 235, 235) or ownerCol
-            render.DrawQuad(p1, p2, p3, p4, Color(col.r, col.g, col.b, 235))
-            -- Bord sombre.
+            -- Logo Imgur du camp sur le drapeau si configuré, sinon aplat de couleur.
+            local logoURL = z.owner ~= "" and (cfg.FactionLogos or {})[z.owner] or ""
+            local logoMat = ((cfg.Flag or {}).ShowLogo ~= false) and logoURL ~= "" and MedalFrontline.GetImgur and MedalFrontline.GetImgur(logoURL) or nil
+            if logoMat then
+                render.SetMaterial(logoMat)
+                render.DrawQuad(p1, p2, p3, p4, Color(255, 255, 255, 240))
+            else
+                render.SetColorMaterialIgnoreZ()
+                render.DrawQuad(p1, p2, p3, p4, Color(col.r, col.g, col.b, 235))
+            end
+            render.SetColorMaterial()
             render.DrawLine(p1, p2, Color(0, 0, 0, 160), false)
             render.DrawLine(p4, p3, Color(0, 0, 0, 160), false)
 

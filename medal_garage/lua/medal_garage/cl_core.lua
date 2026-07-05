@@ -220,6 +220,11 @@ end
 
 concommand.Add(cfg.Command or "medal_garage", MedalGarage.OpenMenu)
 
+-- Ouverture depuis le PNJ vendeur.
+net.Receive("MedalGarage_OpenFromNPC", function()
+    MedalGarage.OpenMenu()
+end)
+
 if cfg.OpenKey then
     hook.Add("PlayerButtonDown", "MedalGarage_OpenKey", function(ply, key)
         if ply ~= LocalPlayer() then return end
@@ -278,6 +283,57 @@ local function drawBar(x, y, w, h, frac, col, bg)
     surface.DrawOutlinedRect(x, y, w, h, 1)
 end
 
+-- Cadran circulaire façon Hell Let Loose (aiguille + graduations).
+local function drawGauge(cx, cy, r, value, maxValue, label, unit)
+    local segs = 48
+    -- Fond du cadran.
+    draw.NoTexture()
+    surface.SetDrawColor(12, 14, 11, 210)
+    local poly = {}
+    for i = 0, segs do
+        local a = math.rad((i / segs) * 360)
+        poly[#poly + 1] = {x = cx + math.cos(a) * r, y = cy + math.sin(a) * r}
+    end
+    surface.DrawPoly(poly)
+    surface.SetDrawColor(232, 234, 222, 235)
+    -- Anneau.
+    for i = 0, segs do
+        local a1 = math.rad((i / segs) * 360)
+        local a2 = math.rad(((i + 1) / segs) * 360)
+        surface.DrawLine(cx + math.cos(a1) * r, cy + math.sin(a1) * r, cx + math.cos(a2) * r, cy + math.sin(a2) * r)
+    end
+    -- Graduations (cadran de 225° en bas comme un compteur auto).
+    local startA, endA = 135, 135 + 270
+    local ticks = 10
+    for i = 0, ticks do
+        local a = math.rad(startA + (endA - startA) * (i / ticks))
+        local inner = r - (i % (ticks / 2) == 0 and S(14) or S(8))
+        surface.SetDrawColor(232, 234, 222, i % 5 == 0 and 235 or 140)
+        surface.DrawLine(cx + math.cos(a) * inner, cy + math.sin(a) * inner, cx + math.cos(a) * (r - S(3)), cy + math.sin(a) * (r - S(3)))
+        if i % 2 == 0 then
+            local lv = math.Round(maxValue * (i / ticks))
+            draw.SimpleText(lv, "MGarage_HUDSmall", cx + math.cos(a) * (inner - S(12)), cy + math.sin(a) * (inner - S(12)), Color(232, 234, 222, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+    end
+    -- Aiguille.
+    local t = math.Clamp(value / math.max(maxValue, 1), 0, 1)
+    local na = math.rad(startA + (endA - startA) * t)
+    surface.SetDrawColor(210, 70, 55, 255)
+    for off = -1, 1 do
+        surface.DrawLine(cx + math.cos(na + math.rad(90)) * off, cy + math.sin(na + math.rad(90)) * off,
+            cx + math.cos(na) * (r - S(16)), cy + math.sin(na) * (r - S(16)))
+    end
+    draw.NoTexture()
+    surface.SetDrawColor(232, 234, 222, 255)
+    local hub = {}
+    for i = 0, 12 do local a = math.rad(i / 12 * 360); hub[#hub + 1] = {x = cx + math.cos(a) * S(5), y = cy + math.sin(a) * S(5)} end
+    surface.DrawPoly(hub)
+    -- Valeur numérique dans un cartouche (façon HLL).
+    draw.RoundedBox(0, cx - S(24), cy + r * 0.38, S(48), S(20), Color(0, 0, 0, 200))
+    draw.SimpleText(math.Round(value), "MGarage_HUD", cx, cy + r * 0.38 + S(10), Color(255, 210, 90), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(unit, "MGarage_HUDSmall", cx, cy - r * 0.42, Color(232, 234, 222, 180), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+end
+
 hook.Add("HUDPaint", "MedalGarage_VehicleHUD", function()
     if (cfg.HUD or {}).Enabled == false then return end
     local ply = LocalPlayer()
@@ -285,53 +341,68 @@ hook.Add("HUDPaint", "MedalGarage_VehicleHUD", function()
     local veh = ply:GetVehicle()
     if not IsValid(veh) then return end
 
-    local w, h = S(420), S(120)
-    local x = ScrW() / 2 - w / 2
-    local y = ScrH() - h - S(30)
-
-    -- Panneau HLL.
-    draw.RoundedBox(0, x, y, w, h, Color(8, 10, 8, 200))
-    draw.RoundedBox(0, x, y, S(4), h, C("Olive"))
-    surface.SetDrawColor(214, 220, 196, 55)
-    surface.DrawOutlinedRect(x, y, w, h, 1)
-
-    local name = veh.MedalVehName or veh:GetNWString("MedalVehName", "")
-    if name == "" then name = "VÉHICULE" end
-    draw.SimpleText(string.upper(name), "MGarage_HUD", x + S(18), y + S(12), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-
-    -- Siège actuel façon HLL.
-    local names = (cfg.Seats or {}).Names or {}
-    local seatName = names[MedalGarage.SeatIdx] or ("SIÈGE " .. MedalGarage.SeatIdx)
-    draw.SimpleText(seatName .. "  (" .. MedalGarage.SeatIdx .. "/" .. MedalGarage.SeatTotal .. ")", "MGarage_HUDSmall", x + w - S(18), y + S(16), C("Khaki"), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
-    if MedalGarage.SeatTotal > 1 then
-        draw.SimpleText("[" .. string.upper(input.GetKeyName((cfg.Seats or {}).SwitchKey or KEY_R) or "R") .. "] CHANGER DE PLACE", "MGarage_HUDSmall", x + w - S(18), y + S(34), Color(210, 214, 196, 160), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
-    end
-
-    -- Vitesse.
     local phys = veh:GetPhysicsObject()
     local speed = IsValid(phys) and phys:GetVelocity():Length() or veh:GetVelocity():Length()
     local kmh = math.Round(speed * 0.06858)
-    draw.SimpleText(kmh .. " KM/H", "MGarage_HUDBig", x + S(18), y + S(40), C("White"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 
-    -- Essence.
+    -- ===== Cadran de vitesse (bas droite, façon HLL) =====
+    local gr = S(72)
+    local gx = ScrW() - S(150)
+    local gy = ScrH() - S(150)
+    drawGauge(gx, gy, gr, kmh, 60, "VITESSE", "km/h")
+
+    -- ===== Colonne de pastilles de sièges (à droite du cadran) =====
+    local total = math.max(MedalGarage.SeatTotal, 1)
+    local sx = ScrW() - S(60)
+    local sy0 = gy - S(56)
+    for i = 1, total do
+        local col = i % 3
+        local row = math.floor((i - 1) / 3)
+        local dx = sx + col * S(24)
+        local dy = sy0 + row * S(24)
+        local occupied = i <= MedalGarage.SeatTotal
+        local isMe = i == MedalGarage.SeatIdx
+        draw.NoTexture()
+        surface.SetDrawColor(isMe and 255 or 232, isMe and 210 or 234, isMe and 90 or 222, occupied and 235 or 90)
+        local dot = {}
+        for k = 0, 12 do local a = math.rad(k / 12 * 360); dot[#dot + 1] = {x = dx + math.cos(a) * S(7), y = dy + math.sin(a) * S(7)} end
+        surface.DrawPoly(dot)
+        surface.SetDrawColor(0, 0, 0, 200)
+        local ring = {}
+        for k = 0, 12 do local a = math.rad(k / 12 * 360); ring[#ring + 1] = {x = dx + math.cos(a) * S(3), y = dy + math.sin(a) * S(3)} end
+        surface.DrawPoly(ring)
+    end
+
+    -- ===== Cartouche gauche : nom, siège, essence, vie =====
+    local name = veh.MedalVehName or veh:GetNWString("MedalVehName", "VÉHICULE")
+    if name == "" then name = "VÉHICULE" end
+    local names = (cfg.Seats or {}).Names or {}
+    local seatName = names[MedalGarage.SeatIdx] or ("SIÈGE " .. MedalGarage.SeatIdx)
+
+    local bx, by = ScrW() - S(560), ScrH() - S(96)
+    draw.SimpleText(string.upper(name) .. "  •  " .. seatName, "MGarage_HUDSmall", bx, by, C("Khaki"), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+
     local fuel = veh:GetNWFloat("MedalFuel", -1)
     local fuelMax = veh:GetNWFloat("MedalFuelMax", 0)
     if fuel >= 0 and fuelMax > 0 then
         local frac = fuel / fuelMax
         local col = frac > 0.25 and C("Khaki") or C("Red")
-        draw.SimpleText("ESSENCE", "MGarage_HUDSmall", x + S(18), y + h - S(34), Color(210, 214, 196, 180), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        drawBar(x + S(90), y + h - S(32), S(150), S(12), frac, col)
-        draw.SimpleText(math.Round(fuel) .. " / " .. math.Round(fuelMax), "MGarage_HUDSmall", x + S(250), y + h - S(34), col, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        if fuel <= 0 then
-            draw.SimpleText("PANNE SÈCHE", "MGarage_HUDSmall", x + w - S(18), y + h - S(34), C("Red"), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
-        end
+        draw.SimpleText("ESSENCE", "MGarage_HUDSmall", bx, by + S(22), Color(210, 214, 196, 180), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        drawBar(bx + S(72), by + S(24), S(150), S(10), frac, col)
+        draw.SimpleText(math.Round(fuel) .. "/" .. math.Round(fuelMax), "MGarage_HUDSmall", bx + S(230), by + S(22), col, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    end
+    local hp, maxhp = veh:Health(), veh:GetMaxHealth()
+    if hp and maxhp and maxhp > 0 then
+        draw.SimpleText("BLINDAGE", "MGarage_HUDSmall", bx, by + S(40), Color(210, 214, 196, 180), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        drawBar(bx + S(72), by + S(42), S(150), S(10), hp / maxhp, Color(160, 90, 70))
     end
 
-    -- Vie du véhicule (si dispo).
-    local hp = veh:Health()
-    local maxhp = veh:GetMaxHealth()
-    if hp and maxhp and maxhp > 0 then
-        drawBar(x + w - S(160), y + S(40), S(140), S(10), hp / maxhp, Color(160, 90, 70))
+    -- ===== Prompt moteur + changement de place (façon HLL) =====
+    if MedalGarage.SeatTotal > 1 then
+        draw.SimpleText("○ [" .. string.upper(input.GetKeyName((cfg.Seats or {}).SwitchKey or KEY_R) or "R") .. "] CHANGER DE PLACE", "MGarage_HUDSmall", ScrW() - S(30), ScrH() - S(30), Color(232, 234, 222, 200), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+    end
+    if fuel and fuel <= 0 and fuelMax > 0 then
+        draw.SimpleText("PANNE SÈCHE — RAVITAILLE AU GARAGE", "MGarage_HUD", ScrW() / 2, ScrH() - S(120), C("Red"), TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
     end
 end)
 

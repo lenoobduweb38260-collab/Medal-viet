@@ -8,6 +8,7 @@ MedalFrontline = MedalFrontline or {}
 
 if SERVER then
     AddCSLuaFile("medal_frontline/sh_config.lua")
+    AddCSLuaFile("medal_frontline/cl_imgur.lua")
     AddCSLuaFile("medal_frontline/cl_hud.lua")
     AddCSLuaFile("medal_frontline/cl_staff.lua")
 
@@ -15,6 +16,7 @@ if SERVER then
     include("medal_frontline/sv_core.lua")
 else
     include("medal_frontline/sh_config.lua")
+    include("medal_frontline/cl_imgur.lua")
     include("medal_frontline/cl_hud.lua")
     include("medal_frontline/cl_staff.lua")
 end

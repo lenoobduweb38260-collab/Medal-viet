@@ -28,6 +28,31 @@ cfg.FactionColors = {
     vietcong = Color(182, 84, 58),
 }
 
+-- Logos de faction affichés AU MILIEU DE L'ÉCRAN (bandeau de capture) et sur
+-- les drapeaux en jeu. Colle des liens IMGUR directs (l'addon les télécharge et
+-- les met en cache dans data/). Exemples acceptés :
+--   "https://i.imgur.com/xxxxx.png"  ou  "https://imgur.com/xxxxx"
+cfg.FactionLogos = {
+    americans = "", -- ex : "https://i.imgur.com/XXXXXXX.png"
+    vietcong = "",  -- ex : "https://i.imgur.com/YYYYYYY.png"
+}
+
+-- Bandeau central : logo du camp qui prend/perd un point, affiché au centre.
+cfg.CaptureBanner = {
+    Enabled = true,
+    LogoSize = 150,
+    Duration = 4,
+    Y = 0.30, -- position verticale (0 = haut, 1 = bas)
+}
+
+-- Drapeau physique par secteur (entité medal_frontline_flag).
+cfg.Flag = {
+    Enabled = true,
+    PoleModel = "models/props_c17/streetlamp001.mdl", -- mât ; remplace par ton modèle
+    ShowClothFlag = true,   -- drapeau en tissu dessiné (couleur du camp)
+    ShowLogo = true,        -- affiche le logo Imgur du camp sur le drapeau
+}
+
 cfg.DefaultMode = "warfare"
 cfg.Modes = {
     warfare = {

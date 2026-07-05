@@ -22,6 +22,18 @@ aperçu 3D rotatif à droite avec fiche et bouton **SORTIR CE VÉHICULE**.
   effacer. Sauvegardés par map. Les véhicules apparaissent au garage le plus
   proche et s'y ravitaillent automatiquement.
 
+## PNJ vendeur & plateformes
+- **PNJ vendeur** : pose-le avec `medal_garage_npc_add` (staff, visé au sol),
+  `medal_garage_npc_clear` pour tout retirer. Appuie sur **E** dessus pour
+  ouvrir le garage. Modèle/nom configurables dans `cfg.NPC`.
+- **Plateformes de spawn** : au lieu d'un rayon, les véhicules se matérialisent
+  sur une **plateforme** posée par le staff (outil « Point de garage » ou
+  `medal_garage_point_add`). Modèle configurable (`cfg.PlatformModel`).
+
+## HUD véhicule (façon HLL)
+Cadran de vitesse circulaire à aiguille, pastilles de sièges (siège occupé /
+ta place surlignée), cartouche essence + blindage, prompt de changement de place.
+
 ## Essence
 - Chaque véhicule a une jauge d'essence (`cfg.Fuel`). Elle baisse à l'usage
   (ralenti + vitesse). À sec, le moteur cale.

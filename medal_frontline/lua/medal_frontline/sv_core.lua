@@ -475,6 +475,21 @@ net.Receive("MedalFrontline_ZoneTool", function(_, ply)
             round.zones[best].radius = math.Clamp(round.zones[best].radius + delta, 150, 4000)
             MedalFrontline.SaveZones()
         end
+    elseif action == "rename" then
+        local pos = net.ReadVector()
+        local newName = string.upper(string.sub(net.ReadString(), 1, 28))
+        if newName ~= "" then
+            local best, bestDist
+            for idx, z in ipairs(round.zones) do
+                local d = z.pos:DistToSqr(pos)
+                if not bestDist or d < bestDist then best, bestDist = idx, d end
+            end
+            if best then
+                round.zones[best].name = newName
+                MedalFrontline.SaveZones()
+                ply:ChatPrint("[Frontline] Secteur renommé : " .. newName)
+            end
+        end
     end
     syncAll()
 end)

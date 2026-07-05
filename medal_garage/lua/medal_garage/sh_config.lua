@@ -26,11 +26,22 @@ cfg.AllowedRoleIDs = {"tank_commander", "crewman", "engineer", "operator", "gunn
 cfg.SpawnCooldown = 30
 cfg.MaxVehiclesPerPlayer = 1
 
--- Distance max d'un garage pour spawn/refuel (les points sont posés par le
--- staff avec l'outil medal_garage_point, sauvegardés par map). Si aucun point
--- n'est défini, le spawn se fait devant le joueur.
-cfg.RequireGaragePoint = false
-cfg.GaragePointRadius = 600
+-- PLATEFORMES de spawn : les véhicules apparaissent sur une plateforme posée par
+-- le staff (outil medal_garage_point) au lieu d'un simple rayon. Le staff place
+-- une plateforme, sauvegardée par map ; le véhicule se matérialise dessus.
+cfg.RequireGaragePoint = true       -- true = spawn uniquement sur une plateforme
+cfg.GaragePointRadius = 600         -- rayon d'action autour de la plateforme (refuel)
+cfg.PlatformModel = "models/props_phx/construct/metal_plate_curve4x2.mdl"
+cfg.PlatformSpawnHeight = 20        -- hauteur d'apparition du véhicule au-dessus de la plateforme
+
+-- PNJ vendeur : ouvre le garage quand un joueur appuie sur E dessus.
+-- Pose-le avec la commande medal_garage_npc_add (staff), sauvegardé par map.
+cfg.NPC = {
+    Enabled = true,
+    Model = "models/player/soldier_stripped.mdl", -- remplace par ton modèle de vendeur
+    Name = "MÉCANO DU GARAGE",
+    UseText = "Ouvrir le garage",
+}
 
 -- =========================
 -- Essence

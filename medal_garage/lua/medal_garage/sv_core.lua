@@ -11,6 +11,7 @@ util.AddNetworkString("MedalGarage_Spawn")
 util.AddNetworkString("MedalGarage_Points")
 util.AddNetworkString("MedalGarage_PointAction")
 util.AddNetworkString("MedalGarage_Refuel")
+util.AddNetworkString("MedalGarage_OpenFromNPC")
 
 MedalGarage.Points = MedalGarage.Points or {}
 MedalGarage.PlayerVehicles = MedalGarage.PlayerVehicles or {}
@@ -51,6 +52,19 @@ local function savePoints()
     file.Write(pointsPath(), util.TableToJSON(out, true))
 end
 
+-- Matérialise une plateforme physique à chaque point de garage.
+local function spawnPlatforms()
+    for _, e in ipairs(ents.FindByClass("medal_garage_platform")) do if IsValid(e) then e:Remove() end end
+    for _, p in ipairs(MedalGarage.Points) do
+        local plat = ents.Create("medal_garage_platform")
+        if IsValid(plat) then
+            plat:SetPos(p)
+            plat:Spawn()
+        end
+    end
+end
+MedalGarage.SpawnPlatforms = spawnPlatforms
+
 local function loadPoints()
     MedalGarage.Points = {}
     local raw = file.Read(pointsPath(), "DATA")
@@ -59,6 +73,7 @@ local function loadPoints()
             table.insert(MedalGarage.Points, Vector(tonumber(p.x) or 0, tonumber(p.y) or 0, tonumber(p.z) or 0))
         end
     end
+    spawnPlatforms()
 end
 hook.Add("InitPostEntity", "MedalGarage_LoadPoints", loadPoints)
 
@@ -114,15 +129,22 @@ net.Receive("MedalGarage_Spawn", function(_, ply)
         return
     end
 
-    -- Position de spawn : point de garage le plus proche, sinon devant le joueur.
+    -- Position de spawn : sur la PLATEFORME de garage la plus proche.
     local spawnPos, spawnAng
-    local garage = nearestGarage(ply:GetPos())
-    if cfg.RequireGaragePoint and not garage then
-        ply:ChatPrint("[Garage] Aucun point de garage défini sur cette map.")
-        return
-    end
-    if garage and ply:GetPos():Distance(garage) <= (tonumber(cfg.GaragePointRadius) or 600) * 3 then
-        spawnPos = garage + Vector(0, 0, 20)
+    local garage, gdist = nearestGarage(ply:GetPos())
+    if cfg.RequireGaragePoint then
+        if not garage then
+            ply:ChatPrint("[Garage] Aucune plateforme de garage sur cette map. (staff : medal_garage_point_add)")
+            return
+        end
+        if gdist and gdist > (tonumber(cfg.GaragePointRadius) or 600) * 2 then
+            ply:ChatPrint("[Garage] Approche-toi d'une plateforme de garage pour déployer un véhicule.")
+            return
+        end
+        spawnPos = garage + Vector(0, 0, tonumber(cfg.PlatformSpawnHeight) or 20)
+        spawnAng = Angle(0, ply:EyeAngles().y, 0)
+    elseif garage and gdist and gdist <= (tonumber(cfg.GaragePointRadius) or 600) * 3 then
+        spawnPos = garage + Vector(0, 0, tonumber(cfg.PlatformSpawnHeight) or 20)
         spawnAng = Angle(0, ply:EyeAngles().y, 0)
     else
         local fwd = ply:GetAimVector(); fwd.z = 0; fwd:Normalize()
@@ -174,11 +196,13 @@ net.Receive("MedalGarage_PointAction", function(_, ply)
     if action == "add" then
         table.insert(MedalGarage.Points, ply:GetPos())
         savePoints()
-        ply:ChatPrint("[Garage] Point de garage ajouté (" .. #MedalGarage.Points .. ").")
+        spawnPlatforms()
+        ply:ChatPrint("[Garage] Plateforme de garage ajoutée (" .. #MedalGarage.Points .. ").")
     elseif action == "clear" then
         MedalGarage.Points = {}
         savePoints()
-        ply:ChatPrint("[Garage] Points de garage effacés.")
+        spawnPlatforms()
+        ply:ChatPrint("[Garage] Plateformes de garage effacées.")
     end
     net.Start("MedalGarage_Points")
         net.WriteUInt(#MedalGarage.Points, 8)
@@ -190,7 +214,59 @@ concommand.Add("medal_garage_point_add", function(ply)
     if not isStaff(ply) then return end
     table.insert(MedalGarage.Points, ply:GetPos())
     savePoints()
-    ply:ChatPrint("[Garage] Point de garage ajouté (" .. #MedalGarage.Points .. ").")
+    spawnPlatforms()
+    ply:ChatPrint("[Garage] Plateforme de garage ajoutée (" .. #MedalGarage.Points .. ").")
+end)
+
+-- =========================
+-- PNJ vendeur : pose/sauvegarde par map.
+-- =========================
+local function npcPath()
+    return "medal_garage/npc_" .. game.GetMap() .. ".json"
+end
+
+local function saveNPCs()
+    file.CreateDir("medal_garage")
+    local out = {}
+    for _, e in ipairs(ents.FindByClass("medal_garage_npc")) do
+        if IsValid(e) then
+            local p, a = e:GetPos(), e:GetAngles()
+            table.insert(out, {x = p.x, y = p.y, z = p.z, yaw = a.y})
+        end
+    end
+    file.Write(npcPath(), util.TableToJSON(out, true))
+end
+
+local function spawnNPC(pos, yaw)
+    local npc = ents.Create("medal_garage_npc")
+    if not IsValid(npc) then return end
+    npc:SetPos(pos)
+    npc:SetAngles(Angle(0, yaw or 0, 0))
+    npc:Spawn()
+    return npc
+end
+
+hook.Add("InitPostEntity", "MedalGarage_LoadNPCs", function()
+    if (cfg.NPC or {}).Enabled == false then return end
+    local raw = file.Read(npcPath(), "DATA")
+    for _, n in ipairs(raw and util.JSONToTable(raw) or {}) do
+        spawnNPC(Vector(tonumber(n.x) or 0, tonumber(n.y) or 0, tonumber(n.z) or 0), tonumber(n.yaw) or 0)
+    end
+end)
+
+concommand.Add("medal_garage_npc_add", function(ply)
+    if not isStaff(ply) then return end
+    local tr = ply:GetEyeTrace()
+    spawnNPC(tr.HitPos, ply:EyeAngles().y + 180)
+    saveNPCs()
+    ply:ChatPrint("[Garage] Vendeur posé. (medal_garage_npc_clear pour tout retirer)")
+end)
+
+concommand.Add("medal_garage_npc_clear", function(ply)
+    if not isStaff(ply) then return end
+    for _, e in ipairs(ents.FindByClass("medal_garage_npc")) do if IsValid(e) then e:Remove() end end
+    saveNPCs()
+    ply:ChatPrint("[Garage] Vendeurs retirés.")
 end)
 
 -- =========================

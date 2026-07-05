@@ -121,8 +121,56 @@ if CLIENT then
         end
     end)
 
+    -- Renommer le secteur visé (touche F) : petit champ de saisie.
+    hook.Add("PlayerButtonDown", "MedalZoneTool_Rename", function(ply, key)
+        if ply ~= LocalPlayer() then return end
+        if key ~= KEY_F then return end
+        local wep = ply:GetActiveWeapon()
+        if not IsValid(wep) or wep:GetClass() ~= "medal_zone_tool" then return end
+        if IsValid(MedalFrontline.RenameFrame) then MedalFrontline.RenameFrame:Remove() end
+        local pos = ply:GetEyeTrace().HitPos
+
+        local f = vgui.Create("DFrame")
+        MedalFrontline.RenameFrame = f
+        f:SetSize(360, 120)
+        f:Center()
+        f:SetTitle("")
+        f:ShowCloseButton(false)
+        f:MakePopup()
+        f.Paint = function(self, w, h)
+            draw.RoundedBox(0, 0, 0, w, h, Color(12, 14, 11, 245))
+            draw.RoundedBox(0, 0, 0, 4, h, Color(112, 126, 74))
+            surface.SetDrawColor(214, 220, 196, 60)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            draw.SimpleText("NOM DU SECTEUR VISÉ", "MZoneTool_Sub", 16, 12, Color(232, 234, 222), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        end
+        local entry = vgui.Create("DTextEntry", f)
+        entry:SetPos(16, 48)
+        entry:SetSize(328, 30)
+        entry:SetFont("DermaLarge")
+        entry:RequestFocus()
+        entry.OnEnter = function(self)
+            net.Start("MedalFrontline_ZoneTool")
+                net.WriteString("rename")
+                net.WriteVector(pos)
+                net.WriteString(self:GetValue() or "")
+            net.SendToServer()
+            f:Remove()
+        end
+        local ok = vgui.Create("DButton", f)
+        ok:SetText("")
+        ok:SetPos(16, 84)
+        ok:SetSize(328, 26)
+        ok.Paint = function(self, w, h)
+            draw.RoundedBox(0, 0, 0, w, h, Color(60, 74, 44, 230))
+            draw.SimpleText("RENOMMER (ENTRÉE)", "MZoneTool_Sub", w / 2, h / 2, Color(240, 242, 232), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        ok.DoClick = function() entry:OnEnter() end
+        f.OnKeyCodePressed = function(self, k) if k == KEY_ESCAPE then self:Remove() end end
+    end)
+
     function SWEP:DrawHUD()
-        draw.SimpleText("CLIC G: créer  •  CLIC D: déplacer  •  R: supprimer  •  MOLETTE: rayon",
+        draw.SimpleText("CLIC G: créer  •  CLIC D: déplacer  •  R: supprimer  •  MOLETTE: rayon  •  F: renommer",
             "MZoneTool_Sub", ScrW() / 2, ScrH() - 80, Color(232, 234, 222, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         surface.SetDrawColor(232, 234, 222, 220)
         surface.DrawRect(ScrW() / 2 - 1, ScrH() / 2 - 8, 2, 16)
